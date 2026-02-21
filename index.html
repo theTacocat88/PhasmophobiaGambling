@@ -153,11 +153,14 @@
                     </div>
                 </div>
 
-                <!-- Fix Bets button (admin) / waiting text (non-admin) -->
+                <!-- Bet actions -->
                 <div id="btn">
                     <p id="bet-error"></p>
-                    <button class="spin" id="spin-btn">Fix Bets</button>
-                    <p id="waiting-msg" class="hidden">Waiting for admin to fix bets...</p>
+                    <!-- Shown to ALL players to lock in + deduct their bets -->
+                    <button class="spin" id="place-bets-btn">Place Bets</button>
+                    <!-- Admin only: lock everyone and move to results phase -->
+                    <button class="spin" id="spin-btn" style="display:none; margin-left:12px;">Fix Bets</button>
+                    <p id="bets-placed-msg" class="hidden" style="color:#7fd67f; margin-top:8px;">Bets placed!</p>
                 </div>
             </div>
 
