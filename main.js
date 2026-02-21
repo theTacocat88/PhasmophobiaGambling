@@ -23,7 +23,7 @@ const auth = getAuth(app);
 const db   = getFirestore(app);
 const rtdb = getDatabase(app);
 
-// ── State ──────────────────────────────────────
+// ─── State ───────────────────────────────────────────────────────────────────
 let currentUid       = null;
 let currentLobbyCode = null;
 let isAdmin          = false;
@@ -32,169 +32,160 @@ let currentPlayers   = {};
 let unsubLobby       = null;
 let unsubBets        = null;
 let unsubPresence    = null;
+let lastPayoutRound  = -1; // prevents applying the same payout twice
 
-// ── DOM ────────────────────────────────────────
-const screenLanding  = document.getElementById("screen-landing");
-const screenLobby    = document.getElementById("screen-lobby");
-
-const displayNameInput = document.getElementById("display-name-input");
-const createLobbyBtn   = document.getElementById("create-lobby-btn");
-const joinCodeInput    = document.getElementById("join-code-input");
-const joinLobbyBtn     = document.getElementById("join-lobby-btn");
-const landingError     = document.getElementById("landing-error");
-
-const lobbyCodeDisplay  = document.getElementById("lobby-code-display");
-const lobbyRoundDisplay = document.getElementById("lobby-round-display");
-const pointsDisplay     = document.getElementById("points-display");
-const prizePoolDisplay  = document.getElementById("prize-pool-display");
-const leaveLobbyBtn     = document.getElementById("leave-lobby-btn");
-const playersList       = document.getElementById("players-list");
-
-const phaseBetting  = document.getElementById("phase-betting");
-const betError      = document.getElementById("bet-error");
-const myBetsDisplay = document.getElementById("my-bets-display");
-
-const phaseResults        = document.getElementById("phase-results");
-const tbdMsg              = document.getElementById("tbd-msg");
-const adminOutcomeSection = document.getElementById("admin-outcome-section");
-const payoutError         = document.getElementById("payout-error");
-
-const payoutPopup         = document.getElementById("payout-popup");
-const popupResultsDisplay = document.getElementById("popup-results-display");
-const popupPayoutsDisplay = document.getElementById("popup-payouts-display");
-const popupYourPayout     = document.getElementById("popup-your-payout");
-
-const settingsToggle    = document.getElementById("settings-toggle");
-const settingsPanel     = document.getElementById("settings-panel");
-const settingsNameInput = document.getElementById("settings-name-input");
-const settingsNameSave  = document.getElementById("settings-name-save");
-const currencySelect    = document.getElementById("currency-select");
-const resetAccountBtn   = document.getElementById("reset-account-btn");
-const settingsMsg       = document.getElementById("settings-msg");
-const userSettingsCard  = document.getElementById("user-settings-card");
-
-// ── Auth ───────────────────────────────────────
-signInAnonymously(auth).catch(console.error);
+// ─── Auth ────────────────────────────────────────────────────────────────────
+signInAnonymously(auth).catch(e => alert("Auth failed: " + e.message));
 
 onAuthStateChanged(auth, async user => {
   if (!user) return;
   currentUid = user.uid;
-  const userRef  = doc(db, "users", currentUid);
-  const userSnap = await getDoc(userRef);
-  if (!userSnap.exists()) {
-    await setDoc(userRef, { points: 300, username: "", currencyPref: "Points" });
-    currencyLabel = "Points";
-    updatePointsDisplay(300);
-  } else {
-    const d = userSnap.data();
-    currencyLabel = d.currencyPref || "Points";
-    updatePointsDisplay(d.points ?? 300);
-    if (d.username) settingsNameInput.value = d.username;
-  }
-  currencySelect.value = currencyLabel;
-  userSettingsCard.classList.remove("hidden");
+  try {
+    const snap = await getDoc(doc(db, "users", currentUid));
+    if (!snap.exists()) {
+      await setDoc(doc(db, "users", currentUid), {
+        points: 300, username: "", currencyPref: "Points"
+      });
+      currencyLabel = "Points";
+      setPointsDisplay(300);
+    } else {
+      const d = snap.data();
+      currencyLabel = d.currencyPref || "Points";
+      setPointsDisplay(d.points ?? 300);
+      // Populate settings username field if one is saved
+      if (d.username) {
+        document.getElementById("settings-name-input").value = d.username;
+      }
+    }
+    document.getElementById("currency-select").value = currencyLabel;
+    document.getElementById("user-settings-card").classList.remove("hidden");
+  } catch(e) { alert("Startup error: " + e.message); }
 });
 
-// ── Settings ───────────────────────────────────
-settingsToggle.addEventListener("click", () => settingsPanel.classList.toggle("hidden"));
-
-settingsNameSave.addEventListener("click", async () => {
-  const n = settingsNameInput.value.trim();
-  if (!n) { settingsMsg.textContent = "Enter a name."; return; }
-  await updateDoc(doc(db, "users", currentUid), { username: n });
-  if (currentLobbyCode)
-    await updateDoc(doc(db, "lobbies", currentLobbyCode), { [`players.${currentUid}`]: n });
-  settingsMsg.textContent = "Saved!";
-  setTimeout(() => { settingsMsg.textContent = ""; }, 2000);
+// ─── Settings panel ───────────────────────────────────────────────────────────
+document.getElementById("settings-toggle").addEventListener("click", () => {
+  document.getElementById("settings-panel").classList.toggle("hidden");
 });
 
-currencySelect.addEventListener("change", async () => {
-  currencyLabel = currencySelect.value;
-  await updateDoc(doc(db, "users", currentUid), { currencyPref: currencyLabel });
-  const snap = await getDoc(doc(db, "users", currentUid));
-  if (snap.exists()) updatePointsDisplay(snap.data().points ?? 0);
+document.getElementById("settings-name-save").addEventListener("click", async () => {
+  const msg = document.getElementById("settings-msg");
+  try {
+    const n = document.getElementById("settings-name-input").value.trim();
+    if (!n) { msg.textContent = "Enter a name."; return; }
+    await updateDoc(doc(db, "users", currentUid), { username: n });
+    if (currentLobbyCode)
+      await updateDoc(doc(db, "lobbies", currentLobbyCode), { [`players.${currentUid}`]: n });
+    msg.textContent = "Saved!";
+    setTimeout(() => { msg.textContent = ""; }, 2000);
+    // Hide the "set username" prompt if it was showing
+    const prompt = document.getElementById("username-prompt");
+    if (prompt) prompt.classList.add("hidden");
+  } catch(e) { msg.textContent = "Error: " + e.message; }
 });
 
-resetAccountBtn.addEventListener("click", async () => {
-  if (!confirm("Reset to 300? Cannot be undone.")) return;
-  await updateDoc(doc(db, "users", currentUid), { points: 300 });
-  updatePointsDisplay(300);
-  settingsMsg.textContent = "Reset.";
-  setTimeout(() => { settingsMsg.textContent = ""; }, 2000);
+document.getElementById("currency-select").addEventListener("change", async () => {
+  try {
+    currencyLabel = document.getElementById("currency-select").value;
+    await updateDoc(doc(db, "users", currentUid), { currencyPref: currencyLabel });
+    const snap = await getDoc(doc(db, "users", currentUid));
+    if (snap.exists()) setPointsDisplay(snap.data().points ?? 0);
+  } catch(e) { console.error(e); }
 });
 
-// ── Landing ────────────────────────────────────
-createLobbyBtn.addEventListener("click", async () => {
-  const name = displayNameInput.value.trim();
-  if (!name)       { landingError.textContent = "Enter a display name first."; return; }
-  if (!currentUid) { landingError.textContent = "Still signing in, try again."; return; }
-  landingError.textContent = "";
-
-  let code;
-  for (let i = 0; i < 10; i++) {
-    const c = String(Math.floor(1000 + Math.random() * 9000));
-    if (!(await getDoc(doc(db, "lobbies", c))).exists()) { code = c; break; }
-  }
-  if (!code) { landingError.textContent = "Could not generate a code, try again."; return; }
-
-  await setDoc(doc(db, "lobbies", code), {
-    adminUid: currentUid,
-    round:    1,
-    phase:    "betting",
-    results:  null,
-    payouts:  null,
-    players:  { [currentUid]: name }
-  });
-  enterLobby(code);
+document.getElementById("reset-account-btn").addEventListener("click", async () => {
+  const msg = document.getElementById("settings-msg");
+  try {
+    if (!confirm("Reset to 300? Cannot be undone.")) return;
+    await updateDoc(doc(db, "users", currentUid), { points: 300 });
+    setPointsDisplay(300);
+    msg.textContent = "Reset.";
+    setTimeout(() => { msg.textContent = ""; }, 2000);
+  } catch(e) { msg.textContent = "Error: " + e.message; }
 });
 
-joinLobbyBtn.addEventListener("click", async () => {
-  const name = displayNameInput.value.trim();
-  const code = joinCodeInput.value.trim();
-  if (!name)       { landingError.textContent = "Enter a display name first."; return; }
-  if (!code)       { landingError.textContent = "Enter a lobby code."; return; }
-  if (!currentUid) { landingError.textContent = "Still signing in, try again."; return; }
-  landingError.textContent = "";
-  const snap = await getDoc(doc(db, "lobbies", code));
-  if (!snap.exists()) { landingError.textContent = "Lobby not found."; return; }
-  await updateDoc(doc(db, "lobbies", code), { [`players.${currentUid}`]: name });
-  enterLobby(code);
+// ─── Landing ─────────────────────────────────────────────────────────────────
+document.getElementById("create-lobby-btn").addEventListener("click", async () => {
+  const err  = document.getElementById("landing-error");
+  const name = document.getElementById("display-name-input").value.trim();
+  err.textContent = "";
+  if (!name)       { err.textContent = "Enter a display name."; return; }
+  if (!currentUid) { err.textContent = "Still signing in, try again."; return; }
+  try {
+    let code;
+    for (let i = 0; i < 10; i++) {
+      const c = String(Math.floor(1000 + Math.random() * 9000));
+      if (!(await getDoc(doc(db, "lobbies", c))).exists()) { code = c; break; }
+    }
+    if (!code) { err.textContent = "Could not generate a code, try again."; return; }
+    await setDoc(doc(db, "lobbies", code), {
+      adminUid: currentUid, round: 1, phase: "betting",
+      results: null, payouts: null, players: { [currentUid]: name }
+    });
+    // Save the lobby display name as their username if they don't have one yet
+    const uSnap = await getDoc(doc(db, "users", currentUid));
+    if (uSnap.exists() && !uSnap.data().username) {
+      await updateDoc(doc(db, "users", currentUid), { username: name });
+      document.getElementById("settings-name-input").value = name;
+    }
+    enterLobby(code);
+  } catch(e) { err.textContent = "Error: " + e.message; console.error(e); }
 });
 
-// ── Leave ──────────────────────────────────────
-leaveLobbyBtn.addEventListener("click", () => doLeave(false));
+document.getElementById("join-lobby-btn").addEventListener("click", async () => {
+  const err  = document.getElementById("landing-error");
+  const name = document.getElementById("display-name-input").value.trim();
+  const code = document.getElementById("join-code-input").value.trim();
+  err.textContent = "";
+  if (!name)       { err.textContent = "Enter a display name."; return; }
+  if (!code)       { err.textContent = "Enter a lobby code."; return; }
+  if (!currentUid) { err.textContent = "Still signing in, try again."; return; }
+  try {
+    const snap = await getDoc(doc(db, "lobbies", code));
+    if (!snap.exists()) { err.textContent = "Lobby not found."; return; }
+    await updateDoc(doc(db, "lobbies", code), { [`players.${currentUid}`]: name });
+    // Save display name as username if they don't have one
+    const uSnap = await getDoc(doc(db, "users", currentUid));
+    if (uSnap.exists() && !uSnap.data().username) {
+      await updateDoc(doc(db, "users", currentUid), { username: name });
+      document.getElementById("settings-name-input").value = name;
+    }
+    enterLobby(code);
+  } catch(e) { err.textContent = "Error: " + e.message; console.error(e); }
+});
+
+// ─── Leave ────────────────────────────────────────────────────────────────────
+document.getElementById("leave-lobby-btn").addEventListener("click", () => doLeave(false));
 
 async function doLeave(wasKicked) {
   if (!currentLobbyCode) return;
   const code = currentLobbyCode;
+  // Null out state before any async work so re-entrant calls are ignored
   cleanupListeners();
   currentLobbyCode = null;
   isAdmin = false;
-  // Remove own RTDB presence
-  await remove(ref(rtdb, `presence/${code}/${currentUid}`)).catch(() => {});
-  await removePlayerFromLobby(currentUid, code);
-  screenLobby.classList.add("hidden");
-  screenLanding.classList.remove("hidden");
+  lastPayoutRound = -1;
+  try { await remove(ref(rtdb, `presence/${code}/${currentUid}`)); } catch(_) {}
+  try { await removePlayerFromLobby(currentUid, code); } catch(_) {}
+  document.getElementById("screen-lobby").classList.add("hidden");
+  document.getElementById("screen-landing").classList.remove("hidden");
   resetBettingUI();
   if (wasKicked) {
-    landingError.textContent = "You were kicked from the lobby.";
-    landingError.style.color = "#e06c6c";
+    const err = document.getElementById("landing-error");
+    err.style.color = "#e06c6c";
+    err.textContent = "You were kicked from the lobby.";
   }
 }
 
-// ── Remove player from lobby (handles last-player lobby deletion) ──
 async function removePlayerFromLobby(uid, code) {
   const lobbyRef  = doc(db, "lobbies", code);
   const lobbySnap = await getDoc(lobbyRef);
   if (!lobbySnap.exists()) return;
-
   const data    = lobbySnap.data();
   const players = { ...data.players };
   delete players[uid];
-
-  await deleteDoc(doc(db, "lobbies", code, "bets", uid)).catch(() => {});
-
+  try { await deleteDoc(doc(db, "lobbies", code, "bets", uid)); } catch(_) {}
   if (Object.keys(players).length === 0) {
+    // Last player — delete the whole lobby
     const betsSnap = await getDocs(collection(db, "lobbies", code, "bets"));
     const batch = writeBatch(db);
     betsSnap.forEach(b => batch.delete(b.ref));
@@ -207,94 +198,102 @@ async function removePlayerFromLobby(uid, code) {
   }
 }
 
-// ── Enter lobby ────────────────────────────────
+// ─── Enter lobby ──────────────────────────────────────────────────────────────
 function enterLobby(code) {
   currentLobbyCode = code;
-  screenLanding.classList.add("hidden");
-  screenLobby.classList.remove("hidden");
-  lobbyCodeDisplay.textContent = `Lobby: ${code}`;
+  lastPayoutRound  = -1;
+  document.getElementById("screen-landing").classList.add("hidden");
+  document.getElementById("screen-lobby").classList.remove("hidden");
+  document.getElementById("lobby-code-display").textContent = `Lobby: ${code}`;
 
-  // Wire all buttons fresh (clone to remove stale listeners)
-  rewire("place-bets-btn", handlePlaceBets);
-  rewire("spin-btn",       handleFixBets);
-  rewire("payout-btn",     handlePayout);
-  rewire("popup-close-btn", handlePopupClose);
-  rewire("leave-lobby-btn", () => doLeave(false));
+  // Wire every interactive button by cloning to strip old listeners
+  wireBtn("place-bets-btn", handlePlaceBets);
+  wireBtn("spin-btn",       handleFixBets);
+  wireBtn("payout-btn",     handlePayout);
+  wireBtn("popup-close-btn", handlePopupClose);
+  wireBtn("leave-lobby-btn", () => doLeave(false));
 
-  // Wire bet inputs fresh
+  // Wire bet inputs — clone to strip old listeners, then re-attach change handler
   ["bet-1","bet-2","bet-3","pick-1","pick-2","pick-3"].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     const fresh = el.cloneNode(true);
     el.parentNode.replaceChild(fresh, el);
-    fresh.addEventListener("change", saveBets);
+    // No auto-save on change — bets only commit when Place Bets is clicked
   });
 
   setupPresence(code);
 
   if (unsubLobby) unsubLobby();
-  unsubLobby = onSnapshot(doc(db, "lobbies", code), snap => {
-    if (!snap.exists()) {
-      cleanupListeners();
-      currentLobbyCode = null;
-      isAdmin = false;
-      screenLobby.classList.add("hidden");
-      screenLanding.classList.remove("hidden");
-      resetBettingUI();
-      return;
-    }
-    handleLobbyUpdate(snap.data());
-  });
+  unsubLobby = onSnapshot(
+    doc(db, "lobbies", code),
+    snap => {
+      if (!snap.exists()) {
+        cleanupListeners(); currentLobbyCode = null; isAdmin = false;
+        document.getElementById("screen-lobby").classList.add("hidden");
+        document.getElementById("screen-landing").classList.remove("hidden");
+        resetBettingUI();
+        return;
+      }
+      handleLobbyUpdate(snap.data());
+    },
+    e => console.error("lobby snapshot error:", e)
+  );
 
   if (unsubBets) unsubBets();
-  unsubBets = onSnapshot(collection(db, "lobbies", code, "bets"), snap => {
-    let pool = 0;
-    let myBets = null;
-    snap.forEach(b => {
-      const d = b.data();
-      pool += (d.wheel1?.amount || 0) + (d.wheel2?.amount || 0) + (d.wheel3?.amount || 0);
-      if (b.id === currentUid) myBets = d;
-    });
-    prizePoolDisplay.textContent = `Prize Pool: ${pool}`;
-    renderMyBets(myBets);
-  });
+  unsubBets = onSnapshot(
+    collection(db, "lobbies", code, "bets"),
+    snap => {
+      let pool = 0;
+      snap.forEach(b => {
+        const d = b.data();
+        pool += (d.wheel1?.amount || 0) + (d.wheel2?.amount || 0) + (d.wheel3?.amount || 0);
+      });
+      document.getElementById("prize-pool-display").textContent = `Prize Pool: ${pool}`;
+    },
+    e => console.error("bets snapshot error:", e)
+  );
 }
 
-function rewire(id, handler) {
+// Clone a button by id to wipe all old listeners, attach one new click handler
+function wireBtn(id, fn) {
   const el = document.getElementById(id);
   if (!el) return;
-  const fresh = el.cloneNode(true);
-  el.parentNode.replaceChild(fresh, el);
-  fresh.addEventListener("click", handler);
+  const clone = el.cloneNode(true);
+  el.parentNode.replaceChild(clone, el);
+  clone.addEventListener("click", fn);
 }
 
-// ── RTDB Presence ──────────────────────────────
+// ─── RTDB Presence ────────────────────────────────────────────────────────────
 function setupPresence(code) {
   const myRef = ref(rtdb, `presence/${code}/${currentUid}`);
   set(myRef, { online: true });
   onDisconnect(myRef).remove();
-
   if (unsubPresence) unsubPresence();
-  unsubPresence = onValue(ref(rtdb, `presence/${code}`), async snapshot => {
-    if (!currentLobbyCode || currentLobbyCode !== code) return;
-    const lobbySnap = await getDoc(doc(db, "lobbies", code));
-    if (!lobbySnap.exists()) return;
-    const inLobby = lobbySnap.data().players || {};
-    const online  = snapshot.val() || {};
-    for (const uid of Object.keys(inLobby)) {
-      if (!online[uid] && uid !== currentUid) {
-        await removePlayerFromLobby(uid, code);
-      }
+  unsubPresence = onValue(
+    ref(rtdb, `presence/${code}`),
+    async snapshot => {
+      if (!currentLobbyCode || currentLobbyCode !== code) return;
+      try {
+        const lobbySnap = await getDoc(doc(db, "lobbies", code));
+        if (!lobbySnap.exists()) return;
+        const inLobby = lobbySnap.data().players || {};
+        const online  = snapshot.val() || {};
+        for (const uid of Object.keys(inLobby)) {
+          if (!online[uid] && uid !== currentUid)
+            await removePlayerFromLobby(uid, code);
+        }
+      } catch(e) { console.error("presence watcher:", e); }
     }
-  });
+  );
 }
 
-// ── Lobby update ───────────────────────────────
+// ─── Lobby update handler ─────────────────────────────────────────────────────
 function handleLobbyUpdate(data) {
-  lobbyRoundDisplay.textContent = `Round ${data.round}`;
+  document.getElementById("lobby-round-display").textContent = `Round ${data.round}`;
   isAdmin = data.adminUid === currentUid;
 
-  // Fix Bets only for admin, Place Bets for everyone
+  // Show Fix Bets only for admin; Place Bets for everyone
   const fixBtn   = document.getElementById("spin-btn");
   const placeBtn = document.getElementById("place-bets-btn");
   if (fixBtn)   fixBtn.style.display   = isAdmin ? "inline-block" : "none";
@@ -303,12 +302,10 @@ function handleLobbyUpdate(data) {
   currentPlayers = data.players || {};
 
   // Kicked check
-  if (currentLobbyCode && !currentPlayers[currentUid]) {
-    doLeave(true);
-    return;
-  }
+  if (currentLobbyCode && !currentPlayers[currentUid]) { doLeave(true); return; }
 
-  // Player list
+  // Rebuild player list
+  const playersList = document.getElementById("players-list");
   playersList.innerHTML = "";
   for (const [uid, name] of Object.entries(currentPlayers)) {
     const tag = document.createElement("div");
@@ -318,12 +315,10 @@ function handleLobbyUpdate(data) {
     tag.appendChild(span);
     if (isAdmin && uid !== currentUid) {
       const kb = document.createElement("button");
-      kb.className   = "kick-btn";
-      kb.textContent = "✕";
-      kb.title       = `Kick ${name}`;
+      kb.className = "kick-btn"; kb.textContent = "✕"; kb.title = `Kick ${name}`;
       kb.addEventListener("click", async () => {
         if (!confirm(`Kick ${name}?`)) return;
-        await kickPlayer(uid);
+        try { await kickPlayer(uid); } catch(e) { console.error("kick:", e); }
       });
       tag.appendChild(kb);
     }
@@ -332,6 +327,9 @@ function handleLobbyUpdate(data) {
 
   rebuildDeathsDropdown(currentPlayers);
 
+  const phaseBetting = document.getElementById("phase-betting");
+  const phaseResults = document.getElementById("phase-results");
+
   if (data.phase === "betting") {
     phaseBetting.classList.remove("hidden");
     phaseResults.classList.add("hidden");
@@ -339,35 +337,65 @@ function handleLobbyUpdate(data) {
   } else if (data.phase === "results") {
     phaseBetting.classList.add("hidden");
     phaseResults.classList.remove("hidden");
+    const tbd = document.getElementById("tbd-msg");
+    const adm = document.getElementById("admin-outcome-section");
     if (isAdmin) {
-      tbdMsg.classList.add("hidden");
-      adminOutcomeSection.classList.remove("hidden");
+      tbd.classList.add("hidden");
+      adm.classList.remove("hidden");
       rebuildOutcome3Dropdown(currentPlayers);
     } else {
-      tbdMsg.classList.remove("hidden");
-      adminOutcomeSection.classList.add("hidden");
+      tbd.classList.remove("hidden");
+      adm.classList.add("hidden");
     }
 
   } else if (data.phase === "payout_done") {
-    showPayoutPopup(data);
+    // Guard: only apply payout once per round number
+    if (data.round !== lastPayoutRound) {
+      lastPayoutRound = data.round;
+      applyMyPayoutAndShowPopup(data);
+    }
   }
 }
 
-// ── Kick ───────────────────────────────────────
-async function kickPlayer(uid) {
-  if (!isAdmin || !currentLobbyCode) return;
-  const lobbyRef  = doc(db, "lobbies", currentLobbyCode);
-  const lobbySnap = await getDoc(lobbyRef);
-  if (!lobbySnap.exists()) return;
-  const players = { ...lobbySnap.data().players };
-  delete players[uid];
-  await updateDoc(lobbyRef, { players });
-  await deleteDoc(doc(db, "lobbies", currentLobbyCode, "bets", uid)).catch(() => {});
-  await remove(ref(rtdb, `presence/${currentLobbyCode}/${uid}`)).catch(() => {});
+// ─── Each client applies their own payout ─────────────────────────────────────
+// The admin wrote payouts: { uid: amount } into the lobby doc.
+// Each client reads only their own user doc (which their own rules allow)
+// and adds their winnings. No cross-user reads needed.
+async function applyMyPayoutAndShowPopup(data) {
+  try {
+    const myAmount = (data.payouts || {})[currentUid] || 0;
+    if (myAmount > 0) {
+      const snap = await getDoc(doc(db, "users", currentUid));
+      if (snap.exists()) {
+        const newPts = snap.data().points + Math.floor(myAmount);
+        await updateDoc(doc(db, "users", currentUid), { points: newPts });
+        setPointsDisplay(newPts);
+      }
+    }
+    showPayoutPopup(data);
+  } catch(e) {
+    console.error("applyMyPayout error:", e);
+    showPayoutPopup(data); // still show popup even if update failed
+  }
 }
 
-// ── Deaths dropdowns ───────────────────────────
-function buildDeathOptions(sel, placeholder, players, current) {
+// ─── Kick ─────────────────────────────────────────────────────────────────────
+async function kickPlayer(uid) {
+  if (!isAdmin || !currentLobbyCode) return;
+  const snap = await getDoc(doc(db, "lobbies", currentLobbyCode));
+  if (!snap.exists()) return;
+  const players = { ...snap.data().players };
+  delete players[uid];
+  await updateDoc(doc(db, "lobbies", currentLobbyCode), { players });
+  try { await deleteDoc(doc(db, "lobbies", currentLobbyCode, "bets", uid)); } catch(_) {}
+  try { await remove(ref(rtdb, `presence/${currentLobbyCode}/${uid}`)); } catch(_) {}
+}
+
+// ─── Deaths dropdowns ─────────────────────────────────────────────────────────
+function buildDeathOptions(selId, placeholder, players) {
+  const sel = document.getElementById(selId);
+  if (!sel) return;
+  const cur = sel.value;
   sel.innerHTML = `<option value="">${placeholder}</option><option value="None Dead">None Dead</option>`;
   for (const name of Object.values(players)) {
     const o = document.createElement("option");
@@ -377,165 +405,129 @@ function buildDeathOptions(sel, placeholder, players, current) {
   const o = document.createElement("option");
   o.value = o.textContent = "All Dead";
   sel.appendChild(o);
-  if ([...sel.options].some(o => o.value === current)) sel.value = current;
+  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
 }
-function rebuildDeathsDropdown(p)  {
-  const s = document.getElementById("pick-3");
-  if (s) buildDeathOptions(s, "— Pick —",   p, s.value);
-}
-function rebuildOutcome3Dropdown(p) {
-  const s = document.getElementById("outcome-3");
-  if (s) buildDeathOptions(s, "— Select —", p, s.value);
-}
+function rebuildDeathsDropdown(p)   { buildDeathOptions("pick-3",    "— Pick —",   p); }
+function rebuildOutcome3Dropdown(p) { buildDeathOptions("outcome-3", "— Select —", p); }
 
-// ── My bets display ────────────────────────────
-function renderMyBets(bets) {
-  if (!myBetsDisplay) return;
-  if (!bets) { myBetsDisplay.innerHTML = `<p class="my-bets-empty">No bets placed yet.</p>`; return; }
-  const labels = ["Win / Lose", "Ghost Type", "Deaths"];
-  const keys   = ["wheel1", "wheel2", "wheel3"];
-  const rows   = keys.map((k, i) => {
-    const b = bets[k];
-    if (!b || b.amount === 0) return null;
-    return `<div class="my-bet-row">
-      <span class="my-bet-label">${labels[i]}</span>
-      <span class="my-bet-pick">${b.pick || "—"}</span>
-      <span class="my-bet-amount">${b.amount} ${currencyLabel}</span>
-    </div>`;
-  }).filter(Boolean);
-  myBetsDisplay.innerHTML = rows.length
-    ? rows.join("")
-    : `<p class="my-bets-empty">No bets placed yet.</p>`;
-}
-
-// ── Save bets to Firestore (no point deduction — just records picks/amounts) ──
-async function saveBets() {
-  if (!currentLobbyCode || !currentUid) return;
-  const betData = {
-    wheel1: { pick: gv("pick-1"), amount: Math.max(0, parseInt(gv("bet-1")) || 0) },
-    wheel2: { pick: gv("pick-2"), amount: Math.max(0, parseInt(gv("bet-2")) || 0) },
-    wheel3: { pick: gv("pick-3"), amount: Math.max(0, parseInt(gv("bet-3")) || 0) },
-  };
-  await setDoc(doc(db, "lobbies", currentLobbyCode, "bets", currentUid), betData);
-}
-
-// ── Place Bets — deducts points for ANY player (including admin) ──────────────
-//    This is the button that actually costs points.
+// ─── Place Bets ───────────────────────────────────────────────────────────────
 async function handlePlaceBets() {
   const errEl = document.getElementById("bet-error");
-  if (errEl) errEl.textContent = "";
+  errEl.textContent = "";
+  try {
+    if (!currentUid)       { errEl.textContent = "Not signed in yet."; return; }
+    if (!currentLobbyCode) { errEl.textContent = "Not in a lobby."; return; }
 
-  const amounts = [
-    Math.max(0, parseInt(gv("bet-1")) || 0),
-    Math.max(0, parseInt(gv("bet-2")) || 0),
-    Math.max(0, parseInt(gv("bet-3")) || 0),
-  ];
-  const picks = [gv("pick-1"), gv("pick-2"), gv("pick-3")];
-  const total = amounts.reduce((a, b) => a + b, 0);
+    const amounts = [
+      Math.max(0, parseInt(document.getElementById("bet-1").value) || 0),
+      Math.max(0, parseInt(document.getElementById("bet-2").value) || 0),
+      Math.max(0, parseInt(document.getElementById("bet-3").value) || 0),
+    ];
+    const picks = [
+      document.getElementById("pick-1").value,
+      document.getElementById("pick-2").value,
+      document.getElementById("pick-3").value,
+    ];
+    const total = amounts[0] + amounts[1] + amounts[2];
 
-  if (total === 0) {
-    if (errEl) errEl.textContent = "Enter at least one bet amount.";
-    return;
-  }
+    if (total === 0) { errEl.textContent = "Enter at least one bet amount."; return; }
+    for (let i = 0; i < 3; i++) {
+      if (amounts[i] > 0 && !picks[i]) {
+        errEl.textContent = `Choose a pick for Wheel ${i + 1}, or set its bet to 0.`;
+        return;
+      }
+    }
 
-  // Validate: every non-zero bet needs a pick
-  for (let i = 0; i < 3; i++) {
-    if (amounts[i] > 0 && !picks[i]) {
-      if (errEl) errEl.textContent = `Choose a pick for Wheel ${i + 1} or set its bet to 0.`;
+    const userSnap = await getDoc(doc(db, "users", currentUid));
+    if (!userSnap.exists()) { errEl.textContent = "User account not found."; return; }
+    const pts = userSnap.data().points ?? 0;
+    if (total > pts) {
+      errEl.textContent = `Not enough ${currencyLabel}. You have ${pts}, bet is ${total}.`;
       return;
     }
+
+    // Deduct points first
+    await updateDoc(doc(db, "users", currentUid), { points: pts - total });
+    setPointsDisplay(pts - total);
+
+    // Write bet to Firestore
+    await setDoc(doc(db, "lobbies", currentLobbyCode, "bets", currentUid), {
+      wheel1: { pick: picks[0], amount: amounts[0] },
+      wheel2: { pick: picks[1], amount: amounts[1] },
+      wheel3: { pick: picks[2], amount: amounts[2] },
+    });
+
+    // Visual confirmation
+    const msg = document.getElementById("bets-placed-msg");
+    if (msg) { msg.classList.remove("hidden"); setTimeout(() => msg.classList.add("hidden"), 2500); }
+
+  } catch(e) {
+    errEl.textContent = "Error placing bets: " + e.message;
+    console.error("handlePlaceBets:", e);
   }
-
-  // Check points
-  const userSnap = await getDoc(doc(db, "users", currentUid));
-  const pts = userSnap.data().points;
-  if (total > pts) {
-    if (errEl) errEl.textContent = `Not enough ${currencyLabel}. You have ${pts}, bet is ${total}.`;
-    return;
-  }
-
-  // Deduct points
-  const newPts = pts - total;
-  await updateDoc(doc(db, "users", currentUid), { points: newPts });
-  updatePointsDisplay(newPts);
-
-  // Write bet to Firestore
-  await setDoc(doc(db, "lobbies", currentLobbyCode, "bets", currentUid), {
-    wheel1: { pick: picks[0], amount: amounts[0] },
-    wheel2: { pick: picks[1], amount: amounts[1] },
-    wheel3: { pick: picks[2], amount: amounts[2] },
-  });
-
-  // Visual confirmation
-  const msg = document.getElementById("bets-placed-msg");
-  if (msg) { msg.classList.remove("hidden"); setTimeout(() => msg.classList.add("hidden"), 2500); }
 }
 
-// ── Fix Bets — admin only, just moves phase to "results" ──────────────────────
-//    Points already deducted when each player clicked Place Bets.
+// ─── Fix Bets (admin only) ────────────────────────────────────────────────────
 async function handleFixBets() {
-  if (!isAdmin) return;
-  await updateDoc(doc(db, "lobbies", currentLobbyCode), { phase: "results" });
+  try {
+    if (!isAdmin || !currentLobbyCode) return;
+    await updateDoc(doc(db, "lobbies", currentLobbyCode), { phase: "results" });
+  } catch(e) { console.error("handleFixBets:", e); alert("Error: " + e.message); }
 }
 
-// ── Payout ─────────────────────────────────────
+// ─── Confirm & Payout (admin only) ────────────────────────────────────────────
+// The admin ONLY writes payout amounts into the lobby doc.
+// Each client's onSnapshot then calls applyMyPayoutAndShowPopup()
+// which reads and updates only that client's own user doc.
+// This avoids all cross-user Firestore reads.
 async function handlePayout() {
-  if (!isAdmin) return;
   const errEl = document.getElementById("payout-error");
-  if (errEl) errEl.textContent = "";
+  errEl.textContent = "";
+  try {
+    if (!isAdmin || !currentLobbyCode) return;
 
-  const o1 = gv("outcome-1");
-  const o2 = gv("outcome-2");
-  const o3 = gv("outcome-3");
-  if (!o1 || !o2 || !o3) {
-    if (errEl) errEl.textContent = "Select an outcome for all three wheels.";
-    return;
+    const o1 = document.getElementById("outcome-1").value;
+    const o2 = document.getElementById("outcome-2").value;
+    const o3 = document.getElementById("outcome-3").value;
+    if (!o1 || !o2 || !o3) { errEl.textContent = "Select an outcome for all three wheels."; return; }
+
+    const results  = { wheel1: o1, wheel2: o2, wheel3: o3 };
+
+    // Fetch all bets
+    const betsSnap = await getDocs(collection(db, "lobbies", currentLobbyCode, "bets"));
+
+    // Calculate who wins what
+    const payoutRecord = calculatePayouts(betsSnap, results); // { uid: amount }
+
+    // Delete all bet docs in one batch
+    const batch = writeBatch(db);
+    betsSnap.forEach(b => batch.delete(b.ref));
+    await batch.commit();
+
+    // Get current round
+    const lobbySnap = await getDoc(doc(db, "lobbies", currentLobbyCode));
+    if (!lobbySnap.exists()) return;
+    const round = lobbySnap.data().round;
+
+    // Write payout_done — every client's onSnapshot fires and each applies their own payout
+    await updateDoc(doc(db, "lobbies", currentLobbyCode), {
+      phase:   "payout_done",
+      results,
+      payouts: payoutRecord,
+      round,
+    });
+
+    document.getElementById("outcome-1").value = "";
+    document.getElementById("outcome-2").value = "";
+    document.getElementById("outcome-3").value = "";
+
+  } catch(e) {
+    errEl.textContent = "Error: " + e.message;
+    console.error("handlePayout:", e);
   }
-
-  const results  = { wheel1: o1, wheel2: o2, wheel3: o3 };
-  const betsSnap = await getDocs(collection(db, "lobbies", currentLobbyCode, "bets"));
-  const { payouts } = calculatePayouts(betsSnap, results);
-
-  // Read all winner balances first, then batch-write everything
-  const updates = [];
-  const payoutRecord = {};
-
-  for (const [uid, amount] of Object.entries(payouts)) {
-    const uSnap = await getDoc(doc(db, "users", uid));
-    if (uSnap.exists()) {
-      updates.push({ uid, ref: doc(db, "users", uid), newPts: uSnap.data().points + Math.floor(amount) });
-    }
-    payoutRecord[uid] = Math.floor(amount);
-  }
-
-  const batch = writeBatch(db);
-  updates.forEach(({ ref: r, newPts }) => batch.update(r, { points: newPts }));
-  betsSnap.forEach(b => batch.delete(b.ref));
-  await batch.commit();
-
-  // Update own display
-  const mine = updates.find(u => u.uid === currentUid);
-  if (mine) updatePointsDisplay(mine.newPts);
-
-  const lobbySnap = await getDoc(doc(db, "lobbies", currentLobbyCode));
-  if (!lobbySnap.exists()) return;
-
-  await updateDoc(doc(db, "lobbies", currentLobbyCode), {
-    phase:   "payout_done",
-    results,
-    payouts: payoutRecord,
-    round:   lobbySnap.data().round,
-  });
-
-  // Reset outcome dropdowns
-  ["outcome-1","outcome-2","outcome-3"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = "";
-  });
 }
 
-// ── Payout math ────────────────────────────────
-// Winners get their stake back + proportional share of losers' money.
+// ─── Payout math ──────────────────────────────────────────────────────────────
 function calculatePayouts(betsSnap, results) {
   let totalPool = 0;
   const allBets = {};
@@ -544,9 +536,7 @@ function calculatePayouts(betsSnap, results) {
     allBets[b.id] = d;
     totalPool += (d.wheel1?.amount || 0) + (d.wheel2?.amount || 0) + (d.wheel3?.amount || 0);
   });
-
-  const winStakes = {};
-  let totalWin = 0;
+  const winStakes = {}; let totalWin = 0;
   for (const [uid, bets] of Object.entries(allBets)) {
     let stake = 0;
     for (const key of ["wheel1","wheel2","wheel3"]) {
@@ -555,80 +545,80 @@ function calculatePayouts(betsSnap, results) {
     }
     if (stake > 0) { winStakes[uid] = stake; totalWin += stake; }
   }
-
-  if (totalWin === 0) return { payouts: {} };
-
+  if (totalWin === 0) return {};
   const losingPool = totalPool - totalWin;
   const payouts = {};
   for (const [uid, stake] of Object.entries(winStakes)) {
-    payouts[uid] = stake + (stake / totalWin) * losingPool;
+    payouts[uid] = Math.floor(stake + (stake / totalWin) * losingPool);
   }
-  return { payouts };
+  return payouts;
 }
 
-// ── Payout popup ───────────────────────────────
+// ─── Payout popup ─────────────────────────────────────────────────────────────
 function showPayoutPopup(data) {
   const results = data.results || {};
   const payouts = data.payouts || {};
   const players = data.players || {};
 
-  popupResultsDisplay.innerHTML = ["wheel1","wheel2","wheel3"].map((k, i) =>
-    `<div class="popup-result-row">
-      <span class="popup-result-label">${["Win / Lose","Ghost Type","Deaths"][i]}</span>
-      <span class="popup-result-value">${results[k] || "—"}</span>
-    </div>`
-  ).join("");
+  document.getElementById("popup-results-display").innerHTML =
+    ["wheel1","wheel2","wheel3"].map((k, i) =>
+      `<div class="popup-result-row">
+        <span class="popup-result-label">${["Win / Lose","Ghost Type","Deaths"][i]}</span>
+        <span class="popup-result-value">${results[k] || "—"}</span>
+      </div>`
+    ).join("");
 
-  popupPayoutsDisplay.innerHTML = Object.keys(payouts).length === 0
-    ? `<p style="color:#aaa;text-align:center;">No winners this round.</p>`
-    : Object.entries(payouts).map(([uid, amt]) =>
-        `<div class="popup-payout-row">
-          <span>${players[uid] || "Player"}</span>
-          <span class="payout-amount">+${amt} ${currencyLabel}</span>
-        </div>`
-      ).join("");
+  document.getElementById("popup-payouts-display").innerHTML =
+    Object.keys(payouts).length === 0
+      ? `<p style="color:#aaa;text-align:center;">No winners this round.</p>`
+      : Object.entries(payouts).map(([uid, amt]) =>
+          `<div class="popup-payout-row">
+            <span>${players[uid] || "Player"}</span>
+            <span class="payout-amount">+${amt} ${currencyLabel}</span>
+          </div>`
+        ).join("");
 
-  const myAmt = payouts[currentUid];
-  popupYourPayout.textContent = myAmt > 0
-    ? `You won ${myAmt} ${currencyLabel}!`
-    : "Better luck next round.";
-  popupYourPayout.style.color = myAmt > 0 ? "#7fd67f" : "#aaa";
+  const myAmt = payouts[currentUid] || 0;
+  const msg   = document.getElementById("popup-your-payout");
+  msg.textContent = myAmt > 0 ? `You won ${myAmt} ${currencyLabel}!` : "Better luck next round.";
+  msg.style.color = myAmt > 0 ? "#7fd67f" : "#aaa";
 
-  payoutPopup.classList.remove("hidden");
+  document.getElementById("payout-popup").classList.remove("hidden");
 }
 
+// ─── Close popup — admin advances to next round ───────────────────────────────
 async function handlePopupClose() {
-  payoutPopup.classList.add("hidden");
+  document.getElementById("payout-popup").classList.add("hidden");
   resetBettingUI();
-  if (!isAdmin || !currentLobbyCode) return;
-  const lobbyRef  = doc(db, "lobbies", currentLobbyCode);
-  const lobbySnap = await getDoc(lobbyRef);
-  if (lobbySnap.exists() && lobbySnap.data().phase === "payout_done") {
-    await updateDoc(lobbyRef, {
-      phase:   "betting",
-      results: null,
-      payouts: null,
-      round:   lobbySnap.data().round + 1,
-    });
-  }
+  try {
+    if (!isAdmin || !currentLobbyCode) return;
+    const lobbySnap = await getDoc(doc(db, "lobbies", currentLobbyCode));
+    if (lobbySnap.exists() && lobbySnap.data().phase === "payout_done") {
+      await updateDoc(doc(db, "lobbies", currentLobbyCode), {
+        phase: "betting", results: null, payouts: null,
+        round: lobbySnap.data().round + 1,
+      });
+    }
+  } catch(e) { console.error("handlePopupClose:", e); }
 }
 
-// ── Helpers ────────────────────────────────────
-function gv(id) {
-  const el = document.getElementById(id);
-  return el ? el.value : "";
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function setPointsDisplay(pts) {
+  document.getElementById("points-display").textContent = `${currencyLabel}: ${pts}`;
 }
-function updatePointsDisplay(pts) {
-  pointsDisplay.textContent = `${currencyLabel}: ${pts}`;
-}
+
 function resetBettingUI() {
-  ["bet-1","bet-2","bet-3"].forEach(id => { const e = document.getElementById(id); if (e) e.value = 0; });
-  ["pick-1","pick-2","pick-3"].forEach(id => { const e = document.getElementById(id); if (e) e.value = ""; });
+  ["bet-1","bet-2","bet-3"].forEach(id => {
+    const e = document.getElementById(id); if (e) e.value = 0;
+  });
+  ["pick-1","pick-2","pick-3"].forEach(id => {
+    const e = document.getElementById(id); if (e) e.value = "";
+  });
   const err = document.getElementById("bet-error");
   if (err) err.textContent = "";
   document.querySelectorAll(".wheel").forEach(el => { el.innerHTML = "<p>?</p>"; });
-  if (myBetsDisplay) myBetsDisplay.innerHTML = `<p class="my-bets-empty">No bets placed yet.</p>`;
 }
+
 function cleanupListeners() {
   if (unsubLobby)    { unsubLobby();    unsubLobby    = null; }
   if (unsubBets)     { unsubBets();     unsubBets     = null; }
