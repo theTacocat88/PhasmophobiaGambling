@@ -1,16 +1,16 @@
-import { initializeApp }            from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { initializeApp }       from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged }
-                                      from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+                               from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc,
   collection, onSnapshot, getDocs, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
-  getDatabase, ref, set, remove, onValue, onDisconnect, serverTimestamp
+  getDatabase, ref, set, remove, onValue, onDisconnect
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 // ─────────────────────────────────────────────
-//  Firebase init
+//  Firebase
 // ─────────────────────────────────────────────
 const firebaseConfig = {
   apiKey:            "AIzaSyBG_SmVUSe93HDNErImoTBkPXGJPc3DBF0",
@@ -21,7 +21,6 @@ const firebaseConfig = {
   appId:             "1:150402636149:web:c0a7521370e21804935b3c",
   databaseURL:       "https://phasmophobiagambling-default-rtdb.firebaseio.com/"
 };
-
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
@@ -34,14 +33,14 @@ let currentUid       = null;
 let currentLobbyCode = null;
 let isAdmin          = false;
 let currencyLabel    = "Points";
-let currentPlayers   = {};   // { uid: name }
+let currentPlayers   = {};
 let unsubLobby       = null;
 let unsubBets        = null;
-let presenceRef      = null;
-let presenceWatcher  = null; // unsub for presence onValue
+let rtdbPresenceRef  = null;
+let unsubPresence    = null; // RTDB onValue unsub
 
 // ─────────────────────────────────────────────
-//  DOM refs
+//  DOM
 // ─────────────────────────────────────────────
 const screenLanding  = document.getElementById("screen-landing");
 const screenLobby    = document.getElementById("screen-lobby");
@@ -59,10 +58,10 @@ const prizePoolDisplay  = document.getElementById("prize-pool-display");
 const leaveLobbyBtn     = document.getElementById("leave-lobby-btn");
 const playersList       = document.getElementById("players-list");
 
-const phaseBetting = document.getElementById("phase-betting");
-const fixBetsBtn   = document.getElementById("spin-btn");       // renamed in HTML
-const waitingMsg   = document.getElementById("waiting-msg");
-const betError     = document.getElementById("bet-error");
+const phaseBetting  = document.getElementById("phase-betting");
+const fixBetsBtn    = document.getElementById("spin-btn");
+const waitingMsg    = document.getElementById("waiting-msg");
+const betError      = document.getElementById("bet-error");
 const myBetsDisplay = document.getElementById("my-bets-display");
 
 const betInputs = [
@@ -115,21 +114,18 @@ signInAnonymously(auth).catch(err => console.error("Auth error:", err));
 onAuthStateChanged(auth, async user => {
   if (!user) return;
   currentUid = user.uid;
-
   const userRef  = doc(db, "users", currentUid);
   const userSnap = await getDoc(userRef);
-
   if (!userSnap.exists()) {
     await setDoc(userRef, { points: 300, username: "", currencyPref: "Points" });
     currencyLabel = "Points";
     updatePointsDisplay(300);
   } else {
-    const data = userSnap.data();
-    currencyLabel = data.currencyPref || "Points";
-    updatePointsDisplay(data.points ?? 300);
-    if (data.username) settingsNameInput.value = data.username;
+    const d = userSnap.data();
+    currencyLabel = d.currencyPref || "Points";
+    updatePointsDisplay(d.points ?? 300);
+    if (d.username) settingsNameInput.value = d.username;
   }
-
   currencySelect.value = currencyLabel;
   userSettingsCard.classList.remove("hidden");
 });
@@ -140,16 +136,13 @@ onAuthStateChanged(auth, async user => {
 settingsToggle.addEventListener("click", () => settingsPanel.classList.toggle("hidden"));
 
 settingsNameSave.addEventListener("click", async () => {
-  const newName = settingsNameInput.value.trim();
-  if (!newName) { settingsMsg.textContent = "Enter a name."; return; }
-  await updateDoc(doc(db, "users", currentUid), { username: newName });
-  if (currentLobbyCode) {
-    await updateDoc(doc(db, "lobbies", currentLobbyCode), {
-      [`players.${currentUid}`]: newName
-    });
-  }
+  const n = settingsNameInput.value.trim();
+  if (!n) { settingsMsg.textContent = "Enter a name."; return; }
+  await updateDoc(doc(db, "users", currentUid), { username: n });
+  if (currentLobbyCode)
+    await updateDoc(doc(db, "lobbies", currentLobbyCode), { [`players.${currentUid}`]: n });
   settingsMsg.textContent = "Saved!";
-  setTimeout(() => settingsMsg.textContent = "", 2000);
+  setTimeout(() => { settingsMsg.textContent = ""; }, 2000);
 });
 
 currencySelect.addEventListener("change", async () => {
@@ -160,27 +153,27 @@ currencySelect.addEventListener("change", async () => {
 });
 
 resetAccountBtn.addEventListener("click", async () => {
-  if (!confirm("Reset your account to 300 points? This cannot be undone.")) return;
+  if (!confirm("Reset to 300? This cannot be undone.")) return;
   await updateDoc(doc(db, "users", currentUid), { points: 300 });
   updatePointsDisplay(300);
-  settingsMsg.textContent = "Account reset.";
-  setTimeout(() => settingsMsg.textContent = "", 2000);
+  settingsMsg.textContent = "Reset.";
+  setTimeout(() => { settingsMsg.textContent = ""; }, 2000);
 });
 
 // ─────────────────────────────────────────────
-//  Landing: Create
+//  Landing
 // ─────────────────────────────────────────────
 createLobbyBtn.addEventListener("click", async () => {
   const name = displayNameInput.value.trim();
-  if (!name)        { landingError.textContent = "Enter a display name first."; return; }
-  if (!currentUid)  { landingError.textContent = "Still signing in, try again."; return; }
+  if (!name)       { landingError.textContent = "Enter a display name first."; return; }
+  if (!currentUid) { landingError.textContent = "Still signing in, try again."; return; }
   landingError.textContent = "";
 
   let code;
   for (let i = 0; i < 10; i++) {
-    const candidate = String(Math.floor(1000 + Math.random() * 9000));
-    const snap = await getDoc(doc(db, "lobbies", candidate));
-    if (!snap.exists()) { code = candidate; break; }
+    const c = String(Math.floor(1000 + Math.random() * 9000));
+    const s = await getDoc(doc(db, "lobbies", c));
+    if (!s.exists()) { code = c; break; }
   }
   if (!code) { landingError.textContent = "Could not generate a code, try again."; return; }
 
@@ -192,13 +185,9 @@ createLobbyBtn.addEventListener("click", async () => {
     payouts:  null,
     players:  { [currentUid]: name }
   });
-
-  enterLobby(code, true);
+  enterLobby(code);
 });
 
-// ─────────────────────────────────────────────
-//  Landing: Join
-// ─────────────────────────────────────────────
 joinLobbyBtn.addEventListener("click", async () => {
   const name = displayNameInput.value.trim();
   const code = joinCodeInput.value.trim();
@@ -207,25 +196,31 @@ joinLobbyBtn.addEventListener("click", async () => {
   if (!currentUid) { landingError.textContent = "Still signing in, try again."; return; }
   landingError.textContent = "";
 
-  const lobbySnap = await getDoc(doc(db, "lobbies", code));
-  if (!lobbySnap.exists()) { landingError.textContent = "Lobby not found."; return; }
+  const snap = await getDoc(doc(db, "lobbies", code));
+  if (!snap.exists()) { landingError.textContent = "Lobby not found."; return; }
 
   await updateDoc(doc(db, "lobbies", code), { [`players.${currentUid}`]: name });
-  enterLobby(code, false);
+  enterLobby(code);
 });
 
 // ─────────────────────────────────────────────
-//  Leave lobby
+//  Leave
 // ─────────────────────────────────────────────
-leaveLobbyBtn.addEventListener("click", () => leaveLobby(false));
+leaveLobbyBtn.addEventListener("click", () => doLeave(false));
 
-async function leaveLobby(kicked = false) {
+async function doLeave(wasKicked) {
   if (!currentLobbyCode) return;
   const code = currentLobbyCode;
 
-  cleanupLobbyListeners();
+  // Stop listeners FIRST so we don't react to our own removal
+  cleanupListeners();
   currentLobbyCode = null;
   isAdmin = false;
+
+  // Clean up RTDB presence manually before calling removePlayer
+  // (cleanupListeners nulls rtdbPresenceRef so we pass the ref directly)
+  const myPresRef = ref(rtdb, `presence/${code}/${currentUid}`);
+  await remove(myPresRef).catch(() => {});
 
   await removePlayerFromLobby(currentUid, code);
 
@@ -233,12 +228,15 @@ async function leaveLobby(kicked = false) {
   screenLanding.classList.remove("hidden");
   resetBettingUI();
 
-  if (kicked) {
+  if (wasKicked) {
     landingError.textContent = "You were kicked from the lobby.";
     landingError.style.color = "#e06c6c";
   }
 }
 
+// ─────────────────────────────────────────────
+//  Remove player from lobby (Firestore + lobby deletion if last)
+// ─────────────────────────────────────────────
 async function removePlayerFromLobby(uid, code) {
   const lobbyRef  = doc(db, "lobbies", code);
   const lobbySnap = await getDoc(lobbyRef);
@@ -248,11 +246,11 @@ async function removePlayerFromLobby(uid, code) {
   const players = { ...data.players };
   delete players[uid];
 
-  // Delete their bets
+  // Always delete this player's bets
   await deleteDoc(doc(db, "lobbies", code, "bets", uid)).catch(() => {});
 
   if (Object.keys(players).length === 0) {
-    // Last player — delete lobby and all subcollections
+    // Last player — delete entire lobby
     const betsSnap = await getDocs(collection(db, "lobbies", code, "bets"));
     const batch = writeBatch(db);
     betsSnap.forEach(b => batch.delete(b.ref));
@@ -263,33 +261,42 @@ async function removePlayerFromLobby(uid, code) {
     if (uid === data.adminUid) newAdmin = Object.keys(players)[0];
     await updateDoc(lobbyRef, { players, adminUid: newAdmin });
   }
-
-  // Remove RTDB presence
-  if (presenceRef) {
-    await remove(presenceRef).catch(() => {});
-    presenceRef = null;
-  }
 }
 
 // ─────────────────────────────────────────────
 //  Enter lobby
 // ─────────────────────────────────────────────
-function enterLobby(code, admin) {
+function enterLobby(code) {
   currentLobbyCode = code;
-  isAdmin          = admin;
 
   screenLanding.classList.add("hidden");
   screenLobby.classList.remove("hidden");
   lobbyCodeDisplay.textContent = `Lobby: ${code}`;
 
+  // Wire buttons ONCE using named handlers — safe to call on re-enter
+  // because addEventListener with the same named function is deduped by the browser
+  // BUT to be safe we clone-replace the buttons to clear any old listeners
+  replaceButton(fixBetsBtn,  handleFixBets);
+  replaceButton(payoutBtn,   handlePayout);
+  replaceButton(popupCloseBtn, handlePopupClose);
+  replaceButton(leaveLobbyBtn, () => doLeave(false));
+
+  betInputs.forEach(input => {
+    const fresh = input.cloneNode(true);
+    input.parentNode.replaceChild(fresh, input);
+    betInputs[betInputs.indexOf(input)] = fresh;
+    fresh.addEventListener("change", saveBets);
+  });
+  pickSelects.forEach(sel => {
+    sel.addEventListener("change", saveBets);
+  });
+
   setupPresence(code);
 
-  // Firestore lobby listener
   if (unsubLobby) unsubLobby();
   unsubLobby = onSnapshot(doc(db, "lobbies", code), snap => {
     if (!snap.exists()) {
-      // Lobby deleted — boot everyone to landing
-      cleanupLobbyListeners();
+      cleanupListeners();
       currentLobbyCode = null;
       isAdmin = false;
       screenLobby.classList.add("hidden");
@@ -300,7 +307,6 @@ function enterLobby(code, admin) {
     handleLobbyUpdate(snap.data());
   });
 
-  // Bets listener — prize pool + own bets display
   if (unsubBets) unsubBets();
   unsubBets = onSnapshot(collection(db, "lobbies", code, "bets"), snap => {
     let pool = 0;
@@ -313,77 +319,73 @@ function enterLobby(code, admin) {
     prizePoolDisplay.textContent = `Prize Pool: ${pool}`;
     renderMyBets(myBets);
   });
+}
 
-  // Wire bet/pick inputs
-  betInputs.forEach(input => input.addEventListener("change", saveBets));
-  pickSelects.forEach(sel   => sel.addEventListener("change",  saveBets));
-
-  // Buttons — use named functions so we can remove them if needed
-  fixBetsBtn.addEventListener("click", handleFixBets);
-  payoutBtn.addEventListener("click", handlePayout);
-  popupCloseBtn.addEventListener("click", () => payoutPopup.classList.add("hidden"));
+// Replace a button element to wipe all old event listeners, then attach one new one
+function replaceButton(btn, handler) {
+  if (!btn) return;
+  const fresh = btn.cloneNode(true);
+  btn.parentNode.replaceChild(fresh, btn);
+  fresh.addEventListener("click", handler);
+  // Update the reference in the outer scope by re-querying by id
+  const id = fresh.id;
+  if (id === "spin-btn")         { /* fixBetsBtn ref is stale but cloneNode keeps id */ }
+  // Return the fresh node so callers can optionally use it
+  return fresh;
 }
 
 // ─────────────────────────────────────────────
-//  RTDB Presence — handles tab-close disconnect
+//  RTDB Presence
 // ─────────────────────────────────────────────
 function setupPresence(code) {
-  presenceRef = ref(rtdb, `presence/${code}/${currentUid}`);
+  rtdbPresenceRef = ref(rtdb, `presence/${code}/${currentUid}`);
+  set(rtdbPresenceRef, { online: true });
+  onDisconnect(rtdbPresenceRef).remove();
 
-  // Write own presence
-  set(presenceRef, { online: true });
-
-  // When this client disconnects (tab close, network drop), remove RTDB node
-  onDisconnect(presenceRef).remove();
-
-  // Watch ALL players' presence in this lobby
-  // When any player's node disappears and they're still in the Firestore players map,
-  // remove them from the lobby. This fires on every client but removePlayerFromLobby
-  // is idempotent so running it multiple times is fine.
-  if (presenceWatcher) presenceWatcher();
+  // Watch everyone's presence in this lobby
+  if (unsubPresence) unsubPresence();
   const lobbyPresRef = ref(rtdb, `presence/${code}`);
-  presenceWatcher = onValue(lobbyPresRef, async snapshot => {
-    if (!currentLobbyCode) return;
+  // onValue returns an unsubscribe function
+  unsubPresence = onValue(lobbyPresRef, async snapshot => {
+    if (!currentLobbyCode || currentLobbyCode !== code) return;
 
     const lobbySnap = await getDoc(doc(db, "lobbies", code));
     if (!lobbySnap.exists()) return;
 
     const firestorePlayers = lobbySnap.data().players || {};
-    const onlinePlayers    = snapshot.val() || {};
+    const online           = snapshot.val() || {};
 
-    // For each player in Firestore, if they have no RTDB presence, remove them
     for (const uid of Object.keys(firestorePlayers)) {
-      if (!onlinePlayers[uid]) {
-        // Don't remove ourselves — we handle our own leave explicitly
-        if (uid !== currentUid) {
-          await removePlayerFromLobby(uid, code);
-        }
+      if (!online[uid] && uid !== currentUid) {
+        // This player is in Firestore but gone from RTDB — disconnect them
+        await removePlayerFromLobby(uid, code);
       }
     }
   });
 }
 
 // ─────────────────────────────────────────────
-//  Lobby real-time update handler
+//  Lobby update handler
 // ─────────────────────────────────────────────
 function handleLobbyUpdate(data) {
   lobbyRoundDisplay.textContent = `Round ${data.round}`;
 
-  // Re-evaluate admin status in case it transferred
   isAdmin = data.adminUid === currentUid;
-  fixBetsBtn.style.display  = isAdmin ? "inline-block" : "none";
+
+  // Show/hide Fix Bets button by re-querying (cloneNode may have replaced the ref)
+  const fb = document.getElementById("spin-btn");
+  if (fb) fb.style.display = isAdmin ? "inline-block" : "none";
   waitingMsg.classList.toggle("hidden", isAdmin);
 
-  // Rebuild players list
+  // Check if we were kicked (our uid gone from players map)
   currentPlayers = data.players || {};
-  playersList.innerHTML = "";
-
-  // Check if we were kicked
-  if (!currentPlayers[currentUid] && currentLobbyCode) {
-    leaveLobby(true);
+  if (currentLobbyCode && !currentPlayers[currentUid]) {
+    doLeave(true);
     return;
   }
 
+  // Rebuild player tags
+  playersList.innerHTML = "";
   for (const [uid, name] of Object.entries(currentPlayers)) {
     const tag = document.createElement("div");
     tag.className = "player-tag" + (uid === data.adminUid ? " player-admin" : "");
@@ -392,19 +394,17 @@ function handleLobbyUpdate(data) {
     nameSpan.textContent = name + (uid === data.adminUid ? " ★" : "");
     tag.appendChild(nameSpan);
 
-    // Kick button — only admin sees it, not on themselves
     if (isAdmin && uid !== currentUid) {
-      const kickBtn = document.createElement("button");
-      kickBtn.className   = "kick-btn";
-      kickBtn.textContent = "✕";
-      kickBtn.title       = `Kick ${name}`;
-      kickBtn.addEventListener("click", async () => {
+      const kb = document.createElement("button");
+      kb.className   = "kick-btn";
+      kb.textContent = "✕";
+      kb.title       = `Kick ${name}`;
+      kb.addEventListener("click", async () => {
         if (!confirm(`Kick ${name}?`)) return;
-        await kickPlayer(uid, code => code);
+        await kickPlayer(uid);
       });
-      tag.appendChild(kickBtn);
+      tag.appendChild(kb);
     }
-
     playersList.appendChild(tag);
   }
 
@@ -413,7 +413,7 @@ function handleLobbyUpdate(data) {
   if (data.phase === "betting") {
     phaseBetting.classList.remove("hidden");
     phaseResults.classList.add("hidden");
-    payoutPopup.classList.add("hidden");
+    // Don't hide popup here — let the close button handle it
 
   } else if (data.phase === "results") {
     phaseBetting.classList.add("hidden");
@@ -429,17 +429,16 @@ function handleLobbyUpdate(data) {
     }
 
   } else if (data.phase === "payout_done") {
+    // Show popup — both admin and non-admin
     showPayoutPopup(data);
   }
 }
 
 // ─────────────────────────────────────────────
-//  Kick player (admin only)
+//  Kick
 // ─────────────────────────────────────────────
 async function kickPlayer(uid) {
   if (!isAdmin || !currentLobbyCode) return;
-
-  // Remove from Firestore lobby players map and delete their bets
   const lobbyRef  = doc(db, "lobbies", currentLobbyCode);
   const lobbySnap = await getDoc(lobbyRef);
   if (!lobbySnap.exists()) return;
@@ -448,56 +447,42 @@ async function kickPlayer(uid) {
   delete players[uid];
   await updateDoc(lobbyRef, { players });
   await deleteDoc(doc(db, "lobbies", currentLobbyCode, "bets", uid)).catch(() => {});
-
-  // Remove their RTDB presence so the presence watcher doesn't re-add them
+  // Remove their RTDB presence to prevent presence watcher re-adding them
   await remove(ref(rtdb, `presence/${currentLobbyCode}/${uid}`)).catch(() => {});
 }
 
 // ─────────────────────────────────────────────
 //  Deaths dropdowns
 // ─────────────────────────────────────────────
-function rebuildDeathsDropdown(players) {
-  const sel     = pickSelects[2];
-  const current = sel.value;
-  sel.innerHTML = `<option value="">— Pick —</option><option value="None Dead">None Dead</option>`;
+function buildDeathOptions(sel, placeholder, players, current) {
+  sel.innerHTML = `<option value="">${placeholder}</option><option value="None Dead">None Dead</option>`;
   for (const name of Object.values(players)) {
-    const opt = document.createElement("option");
-    opt.value = opt.textContent = name;
-    sel.appendChild(opt);
+    const o = document.createElement("option");
+    o.value = o.textContent = name;
+    sel.appendChild(o);
   }
-  const opt = document.createElement("option");
-  opt.value = opt.textContent = "All Dead";
-  sel.appendChild(opt);
+  const o = document.createElement("option");
+  o.value = o.textContent = "All Dead";
+  sel.appendChild(o);
   if ([...sel.options].some(o => o.value === current)) sel.value = current;
 }
 
+function rebuildDeathsDropdown(players) {
+  buildDeathOptions(pickSelects[2], "— Pick —", players, pickSelects[2].value);
+}
 function rebuildOutcome3Dropdown(players) {
-  const sel     = outcomeSelects[2];
-  const current = sel.value;
-  sel.innerHTML = `<option value="">— Select —</option><option value="None Dead">None Dead</option>`;
-  for (const name of Object.values(players)) {
-    const opt = document.createElement("option");
-    opt.value = opt.textContent = name;
-    sel.appendChild(opt);
-  }
-  const opt = document.createElement("option");
-  opt.value = opt.textContent = "All Dead";
-  sel.appendChild(opt);
-  if ([...sel.options].some(o => o.value === current)) sel.value = current;
+  buildDeathOptions(outcomeSelects[2], "— Select —", players, outcomeSelects[2].value);
 }
 
 // ─────────────────────────────────────────────
-//  My bets summary
+//  My Bets display
 // ─────────────────────────────────────────────
 function renderMyBets(bets) {
   if (!myBetsDisplay) return;
-  if (!bets) {
-    myBetsDisplay.innerHTML = `<p class="my-bets-empty">No bets placed yet.</p>`;
-    return;
-  }
+  if (!bets) { myBetsDisplay.innerHTML = `<p class="my-bets-empty">No bets placed yet.</p>`; return; }
   const labels = ["Win / Lose", "Ghost Type", "Deaths"];
   const keys   = ["wheel1", "wheel2", "wheel3"];
-  const rows = keys.map((k, i) => {
+  const rows   = keys.map((k, i) => {
     const b = bets[k];
     if (!b || b.amount === 0) return null;
     return `<div class="my-bet-row">
@@ -506,46 +491,59 @@ function renderMyBets(bets) {
       <span class="my-bet-amount">${b.amount} ${currencyLabel}</span>
     </div>`;
   }).filter(Boolean);
-
-  myBetsDisplay.innerHTML = rows.length
-    ? rows.join("")
-    : `<p class="my-bets-empty">No bets placed yet.</p>`;
+  myBetsDisplay.innerHTML = rows.length ? rows.join("") : `<p class="my-bets-empty">No bets placed yet.</p>`;
 }
 
 // ─────────────────────────────────────────────
-//  Save bets to Firestore
+//  Save bets
 // ─────────────────────────────────────────────
 async function saveBets() {
   if (!currentLobbyCode || !currentUid) return;
+  // Re-query inputs in case they were replaced by cloneNode
+  const b1 = document.getElementById("bet-1");
+  const b2 = document.getElementById("bet-2");
+  const b3 = document.getElementById("bet-3");
+  const p1 = document.getElementById("pick-1");
+  const p2 = document.getElementById("pick-2");
+  const p3 = document.getElementById("pick-3");
   const betData = {
-    wheel1: { pick: pickSelects[0].value, amount: Math.max(0, parseInt(betInputs[0].value) || 0) },
-    wheel2: { pick: pickSelects[1].value, amount: Math.max(0, parseInt(betInputs[1].value) || 0) },
-    wheel3: { pick: pickSelects[2].value, amount: Math.max(0, parseInt(betInputs[2].value) || 0) },
+    wheel1: { pick: p1.value, amount: Math.max(0, parseInt(b1.value) || 0) },
+    wheel2: { pick: p2.value, amount: Math.max(0, parseInt(b2.value) || 0) },
+    wheel3: { pick: p3.value, amount: Math.max(0, parseInt(b3.value) || 0) },
   };
   await setDoc(doc(db, "lobbies", currentLobbyCode, "bets", currentUid), betData);
 }
 
 // ─────────────────────────────────────────────
-//  Fix Bets (was "Spin") — admin locks in bets and moves to results phase
+//  Fix Bets (admin locks bets, moves to results phase)
 // ─────────────────────────────────────────────
 async function handleFixBets() {
   if (!isAdmin) return;
-  betError.textContent = "";
+  const errEl = document.getElementById("bet-error");
+  if (errEl) errEl.textContent = "";
 
-  const bets     = betInputs.map(i => parseInt(i.value) || 0);
-  const totalBet = bets.reduce((a, b) => a + b, 0);
+  const b1 = parseInt(document.getElementById("bet-1").value) || 0;
+  const b2 = parseInt(document.getElementById("bet-2").value) || 0;
+  const b3 = parseInt(document.getElementById("bet-3").value) || 0;
+  const totalBet = b1 + b2 + b3;
+  const bets = [b1, b2, b3];
 
   if (totalBet > 0) {
+    const picks = [
+      document.getElementById("pick-1").value,
+      document.getElementById("pick-2").value,
+      document.getElementById("pick-3").value,
+    ];
     for (let i = 0; i < 3; i++) {
-      if (bets[i] > 0 && !pickSelects[i].value) {
-        betError.textContent = `Pick an option for Wheel ${i + 1} or set its bet to 0.`;
+      if (bets[i] > 0 && !picks[i]) {
+        if (errEl) errEl.textContent = `Pick an option for Wheel ${i + 1} or set its bet to 0.`;
         return;
       }
     }
     const userSnap = await getDoc(doc(db, "users", currentUid));
     const pts = userSnap.data().points;
     if (totalBet > pts) {
-      betError.textContent = `Not enough ${currencyLabel}. You have ${pts} but bet ${totalBet}.`;
+      if (errEl) errEl.textContent = `Not enough ${currencyLabel}. You have ${pts} but bet ${totalBet}.`;
       return;
     }
     await updateDoc(doc(db, "users", currentUid), { points: pts - totalBet });
@@ -557,38 +555,48 @@ async function handleFixBets() {
 }
 
 // ─────────────────────────────────────────────
-//  Payout — admin confirms real outcomes
+//  Payout — admin confirms outcomes, distributes points
 // ─────────────────────────────────────────────
 async function handlePayout() {
   if (!isAdmin) return;
-  payoutError.textContent = "";
 
-  const outcomes = outcomeSelects.map(s => s.value);
-  if (outcomes.some(o => !o)) {
-    payoutError.textContent = "Select an outcome for all three wheels.";
+  const errEl = document.getElementById("payout-error");
+  if (errEl) errEl.textContent = "";
+
+  const o1 = document.getElementById("outcome-1").value;
+  const o2 = document.getElementById("outcome-2").value;
+  const o3 = document.getElementById("outcome-3").value;
+
+  if (!o1 || !o2 || !o3) {
+    if (errEl) errEl.textContent = "Select an outcome for all three wheels.";
     return;
   }
 
-  const results  = { wheel1: outcomes[0], wheel2: outcomes[1], wheel3: outcomes[2] };
+  const results = { wheel1: o1, wheel2: o2, wheel3: o3 };
+
+  // 1. Fetch all bets
   const betsSnap = await getDocs(collection(db, "lobbies", currentLobbyCode, "bets"));
+
+  // 2. Calculate payouts
   const { payouts } = calculatePayouts(betsSnap, results);
 
-  // ── Collect all user reads FIRST, then build + commit batch ──
-  const userUpdates = []; // [{ ref, newPoints }]
-  const payoutNames = {};
+  // 3. Read all user point balances before touching anything
+  const userUpdates = []; // { uid, ref, newPts }
+  const payoutRecord = {}; // { uid: flooredAmount } — written to Firestore for popup display
 
   for (const [uid, amount] of Object.entries(payouts)) {
-    const userRef  = doc(db, "users", uid);
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) {
-      const newPts = userSnap.data().points + Math.floor(amount);
-      userUpdates.push({ ref: userRef, newPts });
-      if (uid === currentUid) updatePointsDisplay(newPts);
+    const uRef  = doc(db, "users", uid);
+    const uSnap = await getDoc(uRef);
+    if (uSnap.exists()) {
+      const newPts = uSnap.data().points + Math.floor(amount);
+      userUpdates.push({ uid, ref: uRef, newPts });
     }
-    payoutNames[uid] = Math.floor(amount);
+    payoutRecord[uid] = Math.floor(amount);
   }
 
-  // Build batch with all writes and bet deletions
+  // 4. Build and commit one atomic batch:
+  //    - update each winner's point total
+  //    - delete all bet documents
   const batch = writeBatch(db);
   for (const { ref: r, newPts } of userUpdates) {
     batch.update(r, { points: newPts });
@@ -596,25 +604,34 @@ async function handlePayout() {
   betsSnap.forEach(b => batch.delete(b.ref));
   await batch.commit();
 
-  // Get current round before updating
-  const lobbySnap = await getDoc(doc(db, "lobbies", currentLobbyCode));
-  const currentRound = lobbySnap.exists() ? lobbySnap.data().round : 1;
+  // Update own display immediately
+  const myUpdate = userUpdates.find(u => u.uid === currentUid);
+  if (myUpdate) updatePointsDisplay(myUpdate.newPts);
 
-  // Write payout_done — triggers popup on all clients
+  // 5. Get current round number
+  const lobbySnap  = await getDoc(doc(db, "lobbies", currentLobbyCode));
+  if (!lobbySnap.exists()) return;
+  const roundNow = lobbySnap.data().round;
+
+  // 6. Write payout_done to Firestore — this triggers the popup on ALL clients.
+  //    Do NOT reset the lobby here. The reset happens when the popup is closed.
   await updateDoc(doc(db, "lobbies", currentLobbyCode), {
     phase:   "payout_done",
     results,
-    payouts: payoutNames,
-    round:   currentRound
+    payouts: payoutRecord,
+    round:   roundNow   // keep round the same; increment happens on close
   });
+
+  // Reset outcome selectors for next round
+  document.getElementById("outcome-1").value = "";
+  document.getElementById("outcome-2").value = "";
+  document.getElementById("outcome-3").value = "";
 }
 
 // ─────────────────────────────────────────────
 //  Payout math
-//
-//  Formula: winners share the LOSING pool proportionally by winning stake.
-//  This guarantees every winner always profits (gets stake back + a share of losers' money).
-//  If everyone wins, they all just get their bets back (no losers to take from).
+//  Winners receive their stake back + proportional share of losers' money.
+//  Bigger bettors earn more. Solo winner gets stake back with no bonus (no losers).
 // ─────────────────────────────────────────────
 function calculatePayouts(betsSnap, results) {
   let totalPool = 0;
@@ -626,7 +643,6 @@ function calculatePayouts(betsSnap, results) {
     totalPool += (d.wheel1?.amount || 0) + (d.wheel2?.amount || 0) + (d.wheel3?.amount || 0);
   });
 
-  // Each player's total winning stake (sum of bets they got right)
   const winningStakes = {};
   let totalWinningStake = 0;
 
@@ -634,34 +650,23 @@ function calculatePayouts(betsSnap, results) {
     let stake = 0;
     for (const key of ["wheel1", "wheel2", "wheel3"]) {
       const b = bets[key];
-      if (b && b.amount > 0 && b.pick && b.pick === results[key]) {
-        stake += b.amount;
-      }
+      if (b && b.amount > 0 && b.pick && b.pick === results[key]) stake += b.amount;
     }
-    if (stake > 0) {
-      winningStakes[uid] = stake;
-      totalWinningStake += stake;
-    }
+    if (stake > 0) { winningStakes[uid] = stake; totalWinningStake += stake; }
   }
 
   if (totalWinningStake === 0) return { payouts: {}, totalPool };
 
-  // Losing pool = all bets that were NOT winning stakes
   const losingPool = totalPool - totalWinningStake;
-
-  // Each winner gets:
-  //   their own stake back  +  their proportional share of the losing pool
   const payouts = {};
   for (const [uid, stake] of Object.entries(winningStakes)) {
-    const bonusShare = totalWinningStake > 0 ? (stake / totalWinningStake) * losingPool : 0;
-    payouts[uid] = stake + bonusShare;
+    payouts[uid] = stake + (stake / totalWinningStake) * losingPool;
   }
-
   return { payouts, totalPool };
 }
 
 // ─────────────────────────────────────────────
-//  Payout popup — shown on ALL clients via Firestore phase change
+//  Payout popup — shown on ALL clients when phase === "payout_done"
 // ─────────────────────────────────────────────
 function showPayoutPopup(data) {
   const results = data.results || {};
@@ -689,7 +694,7 @@ function showPayoutPopup(data) {
     ).join("");
   }
 
-  if (payouts[currentUid]) {
+  if (payouts[currentUid] != null && payouts[currentUid] > 0) {
     popupYourPayout.textContent = `You won ${payouts[currentUid]} ${currencyLabel}!`;
     popupYourPayout.style.color = "#7fd67f";
   } else {
@@ -698,25 +703,27 @@ function showPayoutPopup(data) {
   }
 
   payoutPopup.classList.remove("hidden");
+  // Lobby reset is deferred to handlePopupClose so all clients see the popup first
+}
 
-  // Admin advances to next round
-  if (isAdmin) {
-    const lobbyRef = doc(db, "lobbies", currentLobbyCode);
-    getDoc(lobbyRef).then(snap => {
-      if (snap.exists()) {
-        updateDoc(lobbyRef, {
-          phase:   "betting",
-          results: null,
-          payouts: null,
-          round:   snap.data().round + 1
-        });
-      }
-    });
-    outcomeSelects.forEach(s => s.value = "");
-    payoutError.textContent = "";
-  }
-
+// Called when Close is clicked on the payout popup
+async function handlePopupClose() {
+  payoutPopup.classList.add("hidden");
   resetBettingUI();
+
+  // Only the admin resets the lobby phase (once is enough — all clients react via listener)
+  if (isAdmin && currentLobbyCode) {
+    const lobbyRef  = doc(db, "lobbies", currentLobbyCode);
+    const lobbySnap = await getDoc(lobbyRef);
+    if (lobbySnap.exists() && lobbySnap.data().phase === "payout_done") {
+      await updateDoc(lobbyRef, {
+        phase:   "betting",
+        results: null,
+        payouts: null,
+        round:   lobbySnap.data().round + 1
+      });
+    }
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -727,16 +734,23 @@ function updatePointsDisplay(pts) {
 }
 
 function resetBettingUI() {
-  betInputs.forEach(i  => { i.value = 0; });
-  pickSelects.forEach(s => { s.value = ""; });
-  betError.textContent = "";
-  wheelEls.forEach(el => el.innerHTML = "<p>?</p>");
+  ["bet-1","bet-2","bet-3"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = 0;
+  });
+  ["pick-1","pick-2","pick-3"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  const errEl = document.getElementById("bet-error");
+  if (errEl) errEl.textContent = "";
+  wheelEls.forEach(el => { el.innerHTML = "<p>?</p>"; });
   if (myBetsDisplay) myBetsDisplay.innerHTML = `<p class="my-bets-empty">No bets placed yet.</p>`;
 }
 
-function cleanupLobbyListeners() {
-  if (unsubLobby)      { unsubLobby();      unsubLobby      = null; }
-  if (unsubBets)       { unsubBets();       unsubBets       = null; }
-  if (presenceWatcher) { presenceWatcher(); presenceWatcher = null; }
-  if (presenceRef)     { remove(presenceRef).catch(() => {}); presenceRef = null; }
+function cleanupListeners() {
+  if (unsubLobby)    { unsubLobby();    unsubLobby    = null; }
+  if (unsubBets)     { unsubBets();     unsubBets     = null; }
+  if (unsubPresence) { unsubPresence(); unsubPresence = null; }
+  rtdbPresenceRef = null;
 }
