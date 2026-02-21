@@ -265,6 +265,25 @@ p {
 }
 .player-tag.player-admin { border-color: #888; color: #f5c84a; }
 
+.player-tag {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.kick-btn {
+    background: none;
+    border: none;
+    color: #e06c6c;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 0 2px;
+    line-height: 1;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+}
+.kick-btn:hover { opacity: 1; }
+
 /* ─────────────────────────────────────────────
    Wheel cards
 ───────────────────────────────────────────── */
@@ -356,6 +375,53 @@ main {
     margin-bottom: 8px;
 }
 
+/* Waiting msg */
+#waiting-msg {
+    color: #aaa;
+    margin-top: 12px;
+    text-align: center;
+    font-size: 14px;
+}
+
+/* My bets summary */
+#my-bets-section {
+    max-width: 480px;
+    margin: 24px auto 0;
+}
+
+#my-bets-section .section-label {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+#my-bets-display {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.my-bet-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #2f3233;
+    border: #131414 solid 2px;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: "Spectral SC", serif;
+    font-size: 13px;
+}
+
+.my-bet-label  { color: #aaa; flex: 1; }
+.my-bet-pick   { color: whitesmoke; flex: 1; text-align: center; }
+.my-bet-amount { color: #7fd67f; flex: 0 0 auto; }
+
+.my-bets-empty {
+    color: #666;
+    text-align: center;
+    font-size: 13px;
+}
+
 /* ─────────────────────────────────────────────
    Results / Admin outcome selectors
 ───────────────────────────────────────────── */
@@ -405,6 +471,20 @@ main {
     font-size: 13px;
     min-height: 18px;
     text-align: center;
+}
+
+/* Centered payout action block */
+#payout-action {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 24px;
+}
+#payout-action #payout-btn {
+    width: auto;
+    padding: 12px 32px;
+    display: inline-block;
 }
 
 /* ─────────────────────────────────────────────

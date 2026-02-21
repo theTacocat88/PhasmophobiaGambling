@@ -13,7 +13,7 @@
     </head>
     <body>
 
-        <!-- ===================== USER SETTINGS (top-right, always visible after auth) ===================== -->
+        <!-- ===================== USER SETTINGS (top-right) ===================== -->
         <div id="user-settings-card" class="hidden">
             <button id="settings-toggle" title="Settings">⚙</button>
             <div id="settings-panel" class="hidden">
@@ -74,12 +74,13 @@
                 <button id="leave-lobby-btn" class="btn-danger-sm">Leave</button>
             </div>
 
+            <!-- Players -->
             <div id="players-section">
                 <p class="section-label">Players</p>
                 <div id="players-list"></div>
             </div>
 
-            <!-- Phase: betting -->
+            <!-- ── Betting phase ── -->
             <div id="phase-betting">
                 <main id="main">
 
@@ -132,7 +133,7 @@
                         <input class="bet-input" id="bet-2" type="number" placeholder="Bet..." min="0" value="0" />
                     </div>
 
-                    <!-- Wheel 3: Deaths — options populated dynamically -->
+                    <!-- Wheel 3: Deaths (options populated dynamically) -->
                     <div class="wheel-card">
                         <p class="wheel-label">Deaths</p>
                         <div class="wheel" id="wheel3"><p>?</p></div>
@@ -144,24 +145,32 @@
 
                 </main>
 
+                <!-- Your current bets summary -->
+                <div id="my-bets-section">
+                    <p class="section-label">Your Bets</p>
+                    <div id="my-bets-display">
+                        <p class="my-bets-empty">No bets placed yet.</p>
+                    </div>
+                </div>
+
+                <!-- Fix Bets button (admin) / waiting text (non-admin) -->
                 <div id="btn">
                     <p id="bet-error"></p>
-                    <!-- Admin: Spin button.  Non-admin: locked message -->
-                    <button class="spin" id="spin-btn">Spin</button>
-                    <p id="waiting-msg" class="hidden" style="color:#aaa; margin-top:12px;">Waiting for admin to spin...</p>
+                    <button class="spin" id="spin-btn">Fix Bets</button>
+                    <p id="waiting-msg" class="hidden">Waiting for admin to fix bets...</p>
                 </div>
             </div>
 
-            <!-- Phase: results -->
+            <!-- ── Results phase ── -->
             <div id="phase-results" class="hidden">
-                <p class="section-label" style="text-align:center; margin-top: 30px;">Results</p>
+                <p class="section-label" style="text-align:center; margin-top:30px;">Results</p>
 
-                <!-- Non-admin: TBD message -->
-                <p id="tbd-msg" class="hidden" style="text-align:center; color:#aaa; margin: 16px 0;">
+                <!-- Non-admin -->
+                <p id="tbd-msg" class="hidden" style="text-align:center; color:#aaa; margin:16px 0;">
                     Waiting for admin to confirm results...
                 </p>
 
-                <!-- Admin: outcome selectors -->
+                <!-- Admin outcome selectors -->
                 <div id="admin-outcome-section" class="hidden">
                     <p class="section-label" style="text-align:center; margin-bottom:12px;">What actually happened?</p>
                     <div id="outcome-selectors">
@@ -211,23 +220,24 @@
 
                         <div class="outcome-row">
                             <span class="outcome-label">Deaths</span>
-                            <!-- Options populated dynamically (same as pick-3) -->
                             <select class="outcome-select" id="outcome-3">
                                 <option value="">— Select —</option>
                             </select>
                         </div>
 
                     </div>
-                    <div style="text-align:center; margin-top:20px;">
-                        <p id="payout-error" style="color:#e06c6c; font-size:13px; min-height:18px;"></p>
-                        <button id="payout-btn" class="btn-primary" style="max-width:260px;">Confirm &amp; Payout</button>
+
+                    <!-- Centered payout button -->
+                    <div id="payout-action">
+                        <p id="payout-error"></p>
+                        <button id="payout-btn" class="btn-primary">Confirm &amp; Payout</button>
                     </div>
                 </div>
             </div>
 
         </div>
 
-        <!-- ===================== PAYOUT POPUP (all screens) ===================== -->
+        <!-- ===================== PAYOUT POPUP ===================== -->
         <div id="payout-popup" class="hidden">
             <div id="payout-popup-inner">
                 <p class="popup-title">Round Over!</p>
