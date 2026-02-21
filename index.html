@@ -13,10 +13,30 @@
     </head>
     <body>
 
+        <!-- ===================== USER SETTINGS (top-right, always visible after auth) ===================== -->
+        <div id="user-settings-card" class="hidden">
+            <button id="settings-toggle" title="Settings">⚙</button>
+            <div id="settings-panel" class="hidden">
+                <p class="section-label">Username</p>
+                <input type="text" id="settings-name-input" maxlength="20" placeholder="New username..." />
+                <button id="settings-name-save" class="btn-primary">Save Name</button>
+
+                <p class="section-label" style="margin-top:14px;">Currency Display</p>
+                <select id="currency-select">
+                    <option value="Points">Points</option>
+                    <option value="Ghosties">Ghosties</option>
+                    <option value="EMF Readings">EMF Readings</option>
+                    <option value="Fingerprints">Fingerprints</option>
+                </select>
+
+                <button id="reset-account-btn" class="btn-danger" style="margin-top:14px;">Reset Account</button>
+                <p id="settings-msg"></p>
+            </div>
+        </div>
+
         <!-- ===================== LANDING SCREEN ===================== -->
         <div id="screen-landing">
             <h1>Phasmophobia Gambling</h1>
-
             <div id="landing-card">
                 <p class="section-label">Your Name</p>
                 <input type="text" id="display-name-input" placeholder="e.g. tacocat" maxlength="20" />
@@ -33,7 +53,6 @@
                         <button id="join-lobby-btn" class="btn-primary">Join</button>
                     </div>
                 </div>
-
                 <p id="landing-error"></p>
             </div>
         </div>
@@ -49,12 +68,12 @@
                     <span id="lobby-round-display"></span>
                 </div>
                 <div id="lobby-stats">
-                    <span id="points-display">Points: —</span>
+                    <span id="points-display">— —</span>
                     <span id="prize-pool-display">Prize Pool: 0</span>
                 </div>
+                <button id="leave-lobby-btn" class="btn-danger-sm">Leave</button>
             </div>
 
-            <!-- Players list -->
             <div id="players-section">
                 <p class="section-label">Players</p>
                 <div id="players-list"></div>
@@ -64,6 +83,7 @@
             <div id="phase-betting">
                 <main id="main">
 
+                    <!-- Wheel 1: Win/Lose -->
                     <div class="wheel-card">
                         <p class="wheel-label">Win / Lose</p>
                         <div class="wheel" id="wheel1"><p>?</p></div>
@@ -75,6 +95,7 @@
                         <input class="bet-input" id="bet-1" type="number" placeholder="Bet..." min="0" value="0" />
                     </div>
 
+                    <!-- Wheel 2: Ghost Type -->
                     <div class="wheel-card">
                         <p class="wheel-label">Ghost Type</p>
                         <div class="wheel" id="wheel2"><p>?</p></div>
@@ -111,15 +132,12 @@
                         <input class="bet-input" id="bet-2" type="number" placeholder="Bet..." min="0" value="0" />
                     </div>
 
+                    <!-- Wheel 3: Deaths — options populated dynamically -->
                     <div class="wheel-card">
                         <p class="wheel-label">Deaths</p>
                         <div class="wheel" id="wheel3"><p>?</p></div>
                         <select class="pick-select" id="pick-3">
                             <option value="">— Pick —</option>
-                            <option value="No Deaths">No Deaths</option>
-                            <option value="tacocat">tacocat</option>
-                            <option value="sambone42">sambone42</option>
-                            <option value="All Dead">All Dead</option>
                         </select>
                         <input class="bet-input" id="bet-3" type="number" placeholder="Bet..." min="0" value="0" />
                     </div>
@@ -128,21 +146,96 @@
 
                 <div id="btn">
                     <p id="bet-error"></p>
+                    <!-- Admin: Spin button.  Non-admin: locked message -->
                     <button class="spin" id="spin-btn">Spin</button>
+                    <p id="waiting-msg" class="hidden" style="color:#aaa; margin-top:12px;">Waiting for admin to spin...</p>
                 </div>
             </div>
 
-            <!-- Phase: results (shown after spin, before payout) -->
+            <!-- Phase: results -->
             <div id="phase-results" class="hidden">
                 <p class="section-label" style="text-align:center; margin-top: 30px;">Results</p>
-                <div id="results-display"></div>
-                <!-- Only admin sees this -->
-                <div id="payout-section" class="hidden">
-                    <p id="payout-preview"></p>
-                    <button id="payout-btn" class="btn-primary">Payout &amp; New Round</button>
+
+                <!-- Non-admin: TBD message -->
+                <p id="tbd-msg" class="hidden" style="text-align:center; color:#aaa; margin: 16px 0;">
+                    Waiting for admin to confirm results...
+                </p>
+
+                <!-- Admin: outcome selectors -->
+                <div id="admin-outcome-section" class="hidden">
+                    <p class="section-label" style="text-align:center; margin-bottom:12px;">What actually happened?</p>
+                    <div id="outcome-selectors">
+
+                        <div class="outcome-row">
+                            <span class="outcome-label">Win / Lose</span>
+                            <select class="outcome-select" id="outcome-1">
+                                <option value="">— Select —</option>
+                                <option value="Win">Win</option>
+                                <option value="Lose">Lose</option>
+                            </select>
+                        </div>
+
+                        <div class="outcome-row">
+                            <span class="outcome-label">Ghost Type</span>
+                            <select class="outcome-select" id="outcome-2">
+                                <option value="">— Select —</option>
+                                <option value="Banshee">Banshee</option>
+                                <option value="Dayan">Dayan</option>
+                                <option value="Deogen">Deogen</option>
+                                <option value="Demon">Demon</option>
+                                <option value="Gallu">Gallu</option>
+                                <option value="Goryo">Goryo</option>
+                                <option value="Hantu">Hantu</option>
+                                <option value="Jinn">Jinn</option>
+                                <option value="Mare">Mare</option>
+                                <option value="Moroi">Moroi</option>
+                                <option value="Myling">Myling</option>
+                                <option value="Obake">Obake</option>
+                                <option value="Obambo">Obambo</option>
+                                <option value="Oni">Oni</option>
+                                <option value="Onryo">Onryo</option>
+                                <option value="Phantom">Phantom</option>
+                                <option value="Poltergeist">Poltergeist</option>
+                                <option value="Raiju">Raiju</option>
+                                <option value="Revenant">Revenant</option>
+                                <option value="Shade">Shade</option>
+                                <option value="Spirit">Spirit</option>
+                                <option value="Thaye">Thaye</option>
+                                <option value="The Mimic">The Mimic</option>
+                                <option value="The Twins">The Twins</option>
+                                <option value="Wraith">Wraith</option>
+                                <option value="Yokai">Yokai</option>
+                                <option value="Yurei">Yurei</option>
+                            </select>
+                        </div>
+
+                        <div class="outcome-row">
+                            <span class="outcome-label">Deaths</span>
+                            <!-- Options populated dynamically (same as pick-3) -->
+                            <select class="outcome-select" id="outcome-3">
+                                <option value="">— Select —</option>
+                            </select>
+                        </div>
+
+                    </div>
+                    <div style="text-align:center; margin-top:20px;">
+                        <p id="payout-error" style="color:#e06c6c; font-size:13px; min-height:18px;"></p>
+                        <button id="payout-btn" class="btn-primary" style="max-width:260px;">Confirm &amp; Payout</button>
+                    </div>
                 </div>
             </div>
 
+        </div>
+
+        <!-- ===================== PAYOUT POPUP (all screens) ===================== -->
+        <div id="payout-popup" class="hidden">
+            <div id="payout-popup-inner">
+                <p class="popup-title">Round Over!</p>
+                <div id="popup-results-display"></div>
+                <div id="popup-payouts-display"></div>
+                <p id="popup-your-payout"></p>
+                <button id="popup-close-btn" class="btn-primary" style="margin-top:16px; max-width:160px;">Close</button>
+            </div>
         </div>
 
     </body>
