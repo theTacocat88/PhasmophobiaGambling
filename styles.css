@@ -6,54 +6,403 @@
   font-display: swap;
 }
 
+/* ─────────────────────────────────────────────
+   Base
+───────────────────────────────────────────── */
+* {
+    box-sizing: border-box;
+}
+
 body {
     background-color: #3C4142;
+    margin: 0;
+    padding: 20px;
 }
 
 h1 {
     font-family: 'Phasmophobia', sans-serif;
     font-size: 40px;
+    color: whitesmoke;
+    text-align: center;
+    margin-bottom: 30px;
 }
 
 p {
-    font-family: 'Spectral SC';
+    font-family: 'Spectral SC', serif;
+    color: whitesmoke;
+    margin: 0;
 }
 
-h1, p {
+.hidden {
+    display: none !important;
+}
+
+/* ─────────────────────────────────────────────
+   Shared: labels, buttons
+───────────────────────────────────────────── */
+.section-label {
+    font-family: 'Spectral SC', serif;
+    color: #aaa;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+}
+
+.btn-primary {
+    font-family: 'Spectral SC', serif;
     color: whitesmoke;
+    background-color: #2f3233;
+    border: #131414 solid 3px;
+    border-radius: 10px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    font-size: 14px;
+    width: 100%;
+}
+
+.btn-primary:hover {
+    transform: scale(1.04);
+    border-color: #555;
+}
+
+/* ─────────────────────────────────────────────
+   Landing screen
+───────────────────────────────────────────── */
+#screen-landing {
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+#landing-card {
+    background-color: #2f3233;
+    border: #131414 solid 3px;
+    border-radius: 14px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+#display-name-input,
+#join-code-input {
+    font-family: 'Spectral SC', serif;
+    font-size: 14px;
+    background-color: #3C4142;
+    color: whitesmoke;
+    border: #131414 solid 2px;
+    border-radius: 8px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+}
+
+#display-name-input:focus,
+#join-code-input:focus {
+    border-color: #777;
+}
+
+#landing-actions {
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+}
+
+.landing-half {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.landing-divider {
+    width: 1px;
+    background-color: #555;
+    margin: 0 20px;
+}
+
+#landing-error {
+    color: #e06c6c;
+    font-size: 13px;
+    min-height: 18px;
     text-align: center;
 }
 
+/* ─────────────────────────────────────────────
+   Lobby screen
+───────────────────────────────────────────── */
+#screen-lobby {
+    max-width: 860px;
+    margin: 0 auto;
+}
+
+#lobby-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #2f3233;
+    border: #131414 solid 3px;
+    border-radius: 12px;
+    padding: 14px 22px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+#lobby-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+#lobby-code-display {
+    font-family: 'Phasmophobia', sans-serif;
+    color: whitesmoke;
+    font-size: 22px;
+}
+
+#lobby-round-display {
+    font-family: 'Spectral SC', serif;
+    color: #aaa;
+    font-size: 13px;
+}
+
+#lobby-stats {
+    display: flex;
+    gap: 24px;
+}
+
+#points-display,
+#prize-pool-display {
+    font-family: 'Spectral SC', serif;
+    color: whitesmoke;
+    font-size: 15px;
+}
+
+/* ─────────────────────────────────────────────
+   Players
+───────────────────────────────────────────── */
+#players-section {
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+#players-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.player-tag {
+    font-family: 'Spectral SC', serif;
+    font-size: 13px;
+    color: whitesmoke;
+    background-color: #2f3233;
+    border: #131414 solid 2px;
+    border-radius: 20px;
+    padding: 5px 14px;
+}
+
+.player-tag.player-admin {
+    border-color: #888;
+    color: #f5c84a;
+}
+
+/* ─────────────────────────────────────────────
+   Wheel cards
+───────────────────────────────────────────── */
 main {
     display: flex;
-    gap: 30px;
+    gap: 20px;
     justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.wheel-card {
+    display: flex;
+    flex-direction: column;
     align-items: center;
+    gap: 10px;
+    background-color: #2f3233;
+    border: #131414 solid 3px;
+    border-radius: 12px;
+    padding: 20px 22px;
+    min-width: 175px;
+    flex: 1;
+    max-width: 240px;
+}
+
+.wheel-label {
+    font-family: 'Spectral SC', serif;
+    color: #aaa;
+    font-size: 12px;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
 }
 
 .wheel {
+    display: flex;
     align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    width: 100%;
+}
+
+.wheel p {
+    font-family: 'Spectral SC', serif;
+    color: whitesmoke;
+    font-size: 18px;
+    margin: 0;
+    text-align: center;
+}
+
+/* Pick dropdown */
+.pick-select {
+    font-family: 'Spectral SC', serif;
+    font-size: 13px;
+    background-color: #3C4142;
+    color: whitesmoke;
+    border: #131414 solid 2px;
+    border-radius: 8px;
+    padding: 8px 10px;
+    width: 100%;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.pick-select:focus {
+    border-color: #777;
+}
+
+/* Bet input */
+.bet-input {
+    font-family: 'Spectral SC', serif;
+    font-size: 14px;
+    background-color: #3C4142;
+    color: whitesmoke;
+    border: #131414 solid 2px;
+    border-radius: 8px;
+    padding: 8px 12px;
+    text-align: center;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.bet-input:focus {
+    border-color: #777;
+}
+
+.bet-input::-webkit-outer-spin-button,
+.bet-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.bet-input[type=number] {
+    -moz-appearance: textfield;
+}
+
+/* ─────────────────────────────────────────────
+   Spin button
+───────────────────────────────────────────── */
+#btn {
+    text-align: center;
+    margin-top: 24px;
 }
 
 .spin {
+    font-family: 'Spectral SC', serif;
     color: whitesmoke;
     background-color: #2f3233;
-    padding: 15px;
-    padding-right: 25px;
-    padding-left: 25px;
-    margin-top: 10px;
-    font-family: 'Spectral SC';
-    font: bold;
+    padding: 15px 35px;
     border-radius: 10px;
     border: #131414 solid 3px;
     cursor: pointer;
     transition: all 0.2s ease-in-out;
+    font-size: 15px;
 }
 
 .spin:hover {
-    transform: scale(1.1);
+    transform: scale(1.08);
+    border-color: #555;
 }
 
-#btn {
+#bet-error {
+    color: #e06c6c;
+    font-size: 13px;
+    min-height: 18px;
+    margin-bottom: 8px;
+}
+
+/* ─────────────────────────────────────────────
+   Results
+───────────────────────────────────────────── */
+#results-display {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin: 16px 0 24px;
+}
+
+.result-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    background-color: #2f3233;
+    border: #131414 solid 3px;
+    border-radius: 12px;
+    padding: 16px 24px;
+    min-width: 140px;
+}
+
+.result-label {
+    font-family: 'Spectral SC', serif;
+    font-size: 12px;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.result-value {
+    font-family: 'Spectral SC', serif;
+    font-size: 20px;
+    color: whitesmoke;
+}
+
+/* ─────────────────────────────────────────────
+   Payout section
+───────────────────────────────────────────── */
+#payout-section {
     text-align: center;
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+}
+
+#payout-preview {
+    font-family: 'Spectral SC', serif;
+    font-size: 14px;
+    color: #ccc;
+    line-height: 1.8;
+    background-color: #2f3233;
+    border: #131414 solid 2px;
+    border-radius: 10px;
+    padding: 14px 22px;
+    max-width: 320px;
+    width: 100%;
+}
+
+#payout-btn {
+    max-width: 240px;
 }

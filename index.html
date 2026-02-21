@@ -4,28 +4,146 @@
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <title>Phasmophobia Gambling</title>
-        <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="/styles.css">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Spectral+SC:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+        <script type="module" src="/main.js"></script>
     </head>
     <body>
-        <h1>Phasmophobia Gambling</h1>
-        <p>Points: Loading...</p>
-        <br>
-        <main id="main">
-            <div class="wheel">
-                <p>Click to Spin!</p>
+
+        <!-- ===================== LANDING SCREEN ===================== -->
+        <div id="screen-landing">
+            <h1>Phasmophobia Gambling</h1>
+
+            <div id="landing-card">
+                <p class="section-label">Your Name</p>
+                <input type="text" id="display-name-input" placeholder="e.g. tacocat" maxlength="20" />
+
+                <div id="landing-actions">
+                    <div class="landing-half">
+                        <p class="section-label">Create Lobby</p>
+                        <button id="create-lobby-btn" class="btn-primary">Create</button>
+                    </div>
+                    <div class="landing-divider"></div>
+                    <div class="landing-half">
+                        <p class="section-label">Join Lobby</p>
+                        <input type="text" id="join-code-input" placeholder="Lobby code..." maxlength="6" />
+                        <button id="join-lobby-btn" class="btn-primary">Join</button>
+                    </div>
+                </div>
+
+                <p id="landing-error"></p>
             </div>
-            <div class="wheel">
-                <p>Click to Spin!</p>
+        </div>
+
+        <!-- ===================== LOBBY SCREEN ===================== -->
+        <div id="screen-lobby" class="hidden">
+
+            <h1>Phasmophobia Gambling</h1>
+
+            <div id="lobby-header">
+                <div id="lobby-meta">
+                    <span id="lobby-code-display"></span>
+                    <span id="lobby-round-display"></span>
+                </div>
+                <div id="lobby-stats">
+                    <span id="points-display">Points: —</span>
+                    <span id="prize-pool-display">Prize Pool: 0</span>
+                </div>
             </div>
-            <div class="wheel">
-                <p>Click to Spin!</p>
+
+            <!-- Players list -->
+            <div id="players-section">
+                <p class="section-label">Players</p>
+                <div id="players-list"></div>
             </div>
-        </main>
-        <div id="btn"><button class="spin">Spin</button></div>
+
+            <!-- Phase: betting -->
+            <div id="phase-betting">
+                <main id="main">
+
+                    <div class="wheel-card">
+                        <p class="wheel-label">Win / Lose</p>
+                        <div class="wheel" id="wheel1"><p>?</p></div>
+                        <select class="pick-select" id="pick-1">
+                            <option value="">— Pick —</option>
+                            <option value="Win">Win</option>
+                            <option value="Lose">Lose</option>
+                        </select>
+                        <input class="bet-input" id="bet-1" type="number" placeholder="Bet..." min="0" value="0" />
+                    </div>
+
+                    <div class="wheel-card">
+                        <p class="wheel-label">Ghost Type</p>
+                        <div class="wheel" id="wheel2"><p>?</p></div>
+                        <select class="pick-select" id="pick-2">
+                            <option value="">— Pick —</option>
+                            <option value="Banshee">Banshee</option>
+                            <option value="Dayan">Dayan</option>
+                            <option value="Deogen">Deogen</option>
+                            <option value="Demon">Demon</option>
+                            <option value="Gallu">Gallu</option>
+                            <option value="Goryo">Goryo</option>
+                            <option value="Hantu">Hantu</option>
+                            <option value="Jinn">Jinn</option>
+                            <option value="Mare">Mare</option>
+                            <option value="Moroi">Moroi</option>
+                            <option value="Myling">Myling</option>
+                            <option value="Obake">Obake</option>
+                            <option value="Obambo">Obambo</option>
+                            <option value="Oni">Oni</option>
+                            <option value="Onryo">Onryo</option>
+                            <option value="Phantom">Phantom</option>
+                            <option value="Poltergeist">Poltergeist</option>
+                            <option value="Raiju">Raiju</option>
+                            <option value="Revenant">Revenant</option>
+                            <option value="Shade">Shade</option>
+                            <option value="Spirit">Spirit</option>
+                            <option value="Thaye">Thaye</option>
+                            <option value="The Mimic">The Mimic</option>
+                            <option value="The Twins">The Twins</option>
+                            <option value="Wraith">Wraith</option>
+                            <option value="Yokai">Yokai</option>
+                            <option value="Yurei">Yurei</option>
+                        </select>
+                        <input class="bet-input" id="bet-2" type="number" placeholder="Bet..." min="0" value="0" />
+                    </div>
+
+                    <div class="wheel-card">
+                        <p class="wheel-label">Deaths</p>
+                        <div class="wheel" id="wheel3"><p>?</p></div>
+                        <select class="pick-select" id="pick-3">
+                            <option value="">— Pick —</option>
+                            <option value="No Deaths">No Deaths</option>
+                            <option value="tacocat">tacocat</option>
+                            <option value="sambone42">sambone42</option>
+                            <option value="All Dead">All Dead</option>
+                        </select>
+                        <input class="bet-input" id="bet-3" type="number" placeholder="Bet..." min="0" value="0" />
+                    </div>
+
+                </main>
+
+                <div id="btn">
+                    <p id="bet-error"></p>
+                    <button class="spin" id="spin-btn">Spin</button>
+                </div>
+            </div>
+
+            <!-- Phase: results (shown after spin, before payout) -->
+            <div id="phase-results" class="hidden">
+                <p class="section-label" style="text-align:center; margin-top: 30px;">Results</p>
+                <div id="results-display"></div>
+                <!-- Only admin sees this -->
+                <div id="payout-section" class="hidden">
+                    <p id="payout-preview"></p>
+                    <button id="payout-btn" class="btn-primary">Payout &amp; New Round</button>
+                </div>
+            </div>
+
+        </div>
+
     </body>
 </html>
