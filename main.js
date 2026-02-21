@@ -115,14 +115,15 @@ onAuthStateChanged(auth, async user => {
   const userSnap = await getDoc(userRef);
 
   if (!userSnap.exists()) {
-    await setDoc(userRef, { points: 300, displayName: "", currencyPref: "Points" });
+    await setDoc(userRef, { points: 300, username: "", currencyPref: "Points" });
     currencyLabel = "Points";
     updatePointsDisplay(300);
   } else {
     const data = userSnap.data();
     currencyLabel = data.currencyPref || "Points";
     updatePointsDisplay(data.points ?? 300);
-    if (data.displayName) displayNameInput.value = data.displayName;
+    // Pre-fill settings username input only — NOT the landing name
+    if (data.username) settingsNameInput.value = data.username;
   }
 
   currencySelect.value = currencyLabel;
@@ -138,8 +139,10 @@ settingsNameSave.addEventListener("click", async () => {
   const newName = settingsNameInput.value.trim();
   if (!newName) { settingsMsg.textContent = "Enter a name."; return; }
 
-  await updateDoc(doc(db, "users", currentUid), { displayName: newName });
+  // Save username to user doc (purely cosmetic / persistent preference)
+  await updateDoc(doc(db, "users", currentUid), { username: newName });
 
+  // If in a lobby, update lobby display name too
   if (currentLobbyCode) {
     await updateDoc(doc(db, "lobbies", currentLobbyCode), {
       [`players.${currentUid}`]: newName
@@ -172,12 +175,13 @@ createLobbyBtn.addEventListener("click", async () => {
   if (!currentUid) { landingError.textContent = "Still signing in, try again."; return; }
   landingError.textContent = "";
 
-  let code, attempts = 0;
-  do {
-    code = String(Math.floor(1000 + Math.random() * 9000));
-    const snap = await getDoc(doc(db, "lobbies", code));
-    if (!snap.exists()) break;
-  } while (++attempts < 10);
+  let code;
+  for (let attempts = 0; attempts < 10; attempts++) {
+    const candidate = String(Math.floor(1000 + Math.random() * 9000));
+    const snap = await getDoc(doc(db, "lobbies", candidate));
+    if (!snap.exists()) { code = candidate; break; }
+  }
+  if (!code) { landingError.textContent = "Could not generate a lobby code, try again."; return; }
 
   await setDoc(doc(db, "lobbies", code), {
     adminUid:  currentUid,
@@ -187,8 +191,6 @@ createLobbyBtn.addEventListener("click", async () => {
     payouts:   null,
     players:   { [currentUid]: name }
   });
-
-  await updateDoc(doc(db, "users", currentUid), { displayName: name });
 
   enterLobby(code, true, name);
 });
@@ -205,7 +207,6 @@ joinLobbyBtn.addEventListener("click", async () => {
   if (!lobbySnap.exists()) { landingError.textContent = "Lobby not found."; return; }
 
   await updateDoc(doc(db, "lobbies", code), { [`players.${currentUid}`]: name });
-  await updateDoc(doc(db, "users", currentUid), { displayName: name });
 
   enterLobby(code, false, name);
 });
