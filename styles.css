@@ -23,3 +23,37 @@ h1, p {
     color: whitesmoke;
     text-align: center;
 }
+
+main {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    align-items: center;
+}
+
+.wheel {
+    align-items: center;
+}
+
+.spin {
+    color: whitesmoke;
+    background-color: #2f3233;
+    padding: 15px;
+    padding-right: 25px;
+    padding-left: 25px;
+    margin-top: 10px;
+    font-family: 'Spectral SC';
+    font: bold;
+    border-radius: 10px;
+    border: #131414 solid 3px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.spin:hover {
+    transform: scale(1.1);
+}
+
+#btn {
+    text-align: center;
+}
