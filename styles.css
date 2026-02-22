@@ -513,6 +513,52 @@ main {
     gap: 16px;
 }
 
+/* ── Wheel config panel ── */
+#wheel-config-section {
+    background: #2a2d2e;
+    border: 1px solid #3a3d3e;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 0 auto 20px;
+    max-width: 480px;
+    width: 100%;
+}
+#wheel-config-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.wheel-config-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.wheel-config-label {
+    font-family: 'Spectral SC', serif;
+    font-size: 13px;
+    color: #aaa;
+    min-width: 60px;
+}
+.wheel-type-select {
+    flex: 1;
+    background: #1e2122;
+    color: whitesmoke;
+    border: 1px solid #555;
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-family: 'Spectral SC', serif;
+    font-size: 13px;
+    cursor: pointer;
+}
+.wheel-type-select:focus { outline: none; border-color: #7fd67f; }
+
+/* Empty wheel slot */
+.wheel-card-empty {
+    opacity: 0.35;
+    pointer-events: none;
+    border: 2px dashed #444 !important;
+}
+
 .popup-title {
     font-family: 'Phasmophobia', sans-serif;
     font-size: 28px;

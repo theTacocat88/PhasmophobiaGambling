@@ -23,12 +23,26 @@ const auth = getAuth(app);
 const db   = getFirestore(app);
 const rtdb = getDatabase(app);
 
+// ─── Wheel definitions ────────────────────────────────────────────────────────
+// "deaths" options are built dynamically from player names — options: null means dynamic.
+const WHEEL_DEFS = {
+  winlose:      { label: "Win / Lose",    options: ["Win", "Lose"] },
+  ghosttype:    { label: "Ghost Type",    options: ["Banshee","Dayan","Deogen","Demon","Gallu","Goryo","Hantu","Jinn","Mare","Moroi","Myling","Obake","Obambo","Oni","Onryo","Phantom","Poltergeist","Raiju","Revenant","Shade","Spirit","Thaye","The Mimic","The Twins","Wraith","Yokai","Yurei"] },
+  deaths:       { label: "Deaths",        options: null }, // dynamic: player names
+  perfectrun:   { label: "Perfect Run",   options: ["Yes", "No"] },
+  ghostspeed:   { label: "Ghost Speed",   options: ["Slow", "Medium", "Fast", "Variable"] },
+  cursedobject: { label: "Cursed Object", options: ["Music Box","Ouija Board","Summoning Circle","Voodoo Doll","Monkey's Paw","Tarot Cards","Haunted Mirror"] },
+};
+
+const WHEEL_KEYS = ["wheel1", "wheel2", "wheel3"];
+
 // ─── State ────────────────────────────────────────────────────────────────────
 let currentUid       = null;
 let currentLobbyCode = null;
 let isAdmin          = false;
 let currencyLabel    = "Points";
 let currentPlayers   = {};
+let activeWheels     = ["winlose", "ghosttype", "deaths"]; // default, overwritten by lobby doc
 let unsubLobby       = null;
 let unsubBets        = null;
 let unsubPresence    = null;
@@ -41,25 +55,178 @@ function setPointsDisplay(pts) {
   $("points-display").textContent = `${currencyLabel}: ${pts}`;
 }
 
-function resetBettingUI() {
-  ["bet-1","bet-2","bet-3"].forEach(id => { const e=$(id); if(e) e.value=0; });
-  ["pick-1","pick-2","pick-3"].forEach(id => { const e=$(id); if(e) e.value=""; });
-  const err = $("bet-error"); if(err) err.textContent = "";
-  document.querySelectorAll(".wheel").forEach(el => { el.innerHTML="<p>?</p>"; });
-  const mb = $("my-bets-display");
-  if(mb) mb.innerHTML = `<p class="my-bets-empty">No bets placed yet.</p>`;
-}
-
 function cleanupListeners() {
   if (unsubLobby)    { unsubLobby();    unsubLobby    = null; }
   if (unsubBets)     { unsubBets();     unsubBets     = null; }
   if (unsubPresence) { unsubPresence(); unsubPresence = null; }
 }
 
-// ─── ONE-TIME button wiring at module load ────────────────────────────────────
-// All click handlers are attached ONCE here. Each handler checks state at
-// call time (currentUid, currentLobbyCode, isAdmin) and bails out if not ready.
-// No cloning, no re-wiring, no lost listeners.
+// Build the options for a pick-select given a wheel type key and current players
+function getWheelOptions(typeKey, players) {
+  const def = WHEEL_DEFS[typeKey];
+  if (!def) return [];
+  if (def.options !== null) return def.options;
+  // Deaths: dynamic
+  const names = Object.values(players);
+  return ["None Dead", ...names, "All Dead"];
+}
+
+// ─── Render betting cards ─────────────────────────────────────────────────────
+// Called whenever activeWheels or currentPlayers changes.
+// Rebuilds #main (the three wheel cards) dynamically.
+function renderBettingCards() {
+  const main = $("main");
+  main.innerHTML = "";
+
+  activeWheels.forEach((typeKey, i) => {
+    const slotKey = WHEEL_KEYS[i]; // "wheel1", "wheel2", "wheel3"
+    const def     = WHEEL_DEFS[typeKey] || { label: "Unknown", options: [] };
+    const options = getWheelOptions(typeKey, currentPlayers);
+
+    const card = document.createElement("div");
+    card.className = "wheel-card";
+    card.innerHTML = `
+      <p class="wheel-label">${def.label}</p>
+      <div class="wheel" id="wheel${i+1}"><p>?</p></div>
+      <select class="pick-select" id="pick-${i+1}">
+        <option value="">— Pick —</option>
+        ${options.map(o => `<option value="${o}">${o}</option>`).join("")}
+      </select>
+      <input class="bet-input" id="bet-${i+1}" type="number" placeholder="Bet..." min="0" value="0" />
+    `;
+    main.appendChild(card);
+  });
+
+  // Fill unused wheel slots with empty placeholders so IDs always exist
+  for (let i = activeWheels.length; i < 3; i++) {
+    const card = document.createElement("div");
+    card.className = "wheel-card wheel-card-empty";
+    card.innerHTML = `<p class="wheel-label" style="color:#555;">— Not used —</p>`;
+    main.appendChild(card);
+    // Create hidden dummy inputs so bet logic doesn't crash on getElementById
+    const dummy = document.createElement("input");
+    dummy.type = "hidden"; dummy.id = `bet-${i+1}`; dummy.value = "0";
+    card.appendChild(dummy);
+    const dummyPick = document.createElement("input");
+    dummyPick.type = "hidden"; dummyPick.id = `pick-${i+1}`; dummyPick.value = "";
+    card.appendChild(dummyPick);
+  }
+}
+
+// ─── Render outcome selectors (admin results phase) ───────────────────────────
+function renderOutcomeSelectors() {
+  const container = $("outcome-selectors");
+  container.innerHTML = "";
+
+  activeWheels.forEach((typeKey, i) => {
+    const def     = WHEEL_DEFS[typeKey] || { label: "Unknown", options: [] };
+    const options = getWheelOptions(typeKey, currentPlayers);
+
+    const row = document.createElement("div");
+    row.className = "outcome-row";
+    row.innerHTML = `
+      <span class="outcome-label">${def.label}</span>
+      <select class="outcome-select" id="outcome-${i+1}">
+        <option value="">— Select —</option>
+        ${options.map(o => `<option value="${o}">${o}</option>`).join("")}
+      </select>
+    `;
+    container.appendChild(row);
+  });
+
+  // Dummy hidden selects for unused wheels so payout logic doesn't crash
+  for (let i = activeWheels.length; i < 3; i++) {
+    const dummy = document.createElement("select");
+    dummy.id    = `outcome-${i+1}`;
+    dummy.style.display = "none";
+    // Give it a non-empty value so the "select all three" check passes for unused slots
+    dummy.innerHTML = `<option value="N/A" selected>N/A</option>`;
+    container.appendChild(dummy);
+  }
+}
+
+// ─── Render wheel config panel (admin only) ───────────────────────────────────
+function renderWheelConfig() {
+  const panel = $("wheel-config-panel");
+  if (!panel) return;
+  panel.innerHTML = "";
+
+  for (let i = 0; i < 3; i++) {
+    const row = document.createElement("div");
+    row.className = "wheel-config-row";
+
+    const label = document.createElement("span");
+    label.textContent = `Wheel ${i+1}`;
+    label.className = "wheel-config-label";
+    row.appendChild(label);
+
+    const sel = document.createElement("select");
+    sel.id        = `wheel-type-${i+1}`;
+    sel.className = "wheel-type-select";
+
+    // First option: "— None —" (only for wheels 2 and 3)
+    if (i > 0) {
+      const none = document.createElement("option");
+      none.value = ""; none.textContent = "— None —";
+      sel.appendChild(none);
+    }
+
+    Object.entries(WHEEL_DEFS).forEach(([key, def]) => {
+      const opt = document.createElement("option");
+      opt.value       = key;
+      opt.textContent = def.label;
+      sel.appendChild(opt);
+    });
+
+    sel.value = activeWheels[i] || "";
+    sel.addEventListener("change", onWheelConfigChange);
+    row.appendChild(sel);
+    panel.appendChild(row);
+  }
+}
+
+async function onWheelConfigChange() {
+  if (!isAdmin || !currentLobbyCode) return;
+
+  const w1 = $("wheel-type-1").value;
+  const w2 = $("wheel-type-2") ? $("wheel-type-2").value : "";
+  const w3 = $("wheel-type-3") ? $("wheel-type-3").value : "";
+
+  if (!w1) {
+    // Wheel 1 must always be set
+    $("wheel-type-1").value = activeWheels[0] || Object.keys(WHEEL_DEFS)[0];
+    return;
+  }
+
+  const wheels = [w1, w2, w3].filter(Boolean);
+
+  // Check for duplicates
+  if (new Set(wheels).size !== wheels.length) {
+    $("wheel-config-error").textContent = "Each wheel must be a different type.";
+    // Revert UI to current activeWheels
+    renderWheelConfig();
+    return;
+  }
+  $("wheel-config-error").textContent = "";
+
+  try {
+    await updateDoc(doc(db, "lobbies", currentLobbyCode), { wheels });
+  } catch(e) { console.error("wheel config save:", e); }
+}
+
+// ─── Reset betting UI ─────────────────────────────────────────────────────────
+function resetBettingUI() {
+  for (let i = 1; i <= 3; i++) {
+    const b = $(`bet-${i}`);   if (b) b.value = "0";
+    const p = $(`pick-${i}`);  if (p) p.value = "";
+  }
+  const err = $("bet-error"); if (err) err.textContent = "";
+  document.querySelectorAll(".wheel").forEach(el => { el.innerHTML = "<p>?</p>"; });
+  const mb = $("my-bets-display");
+  if (mb) mb.innerHTML = `<p class="my-bets-empty">No bets placed yet.</p>`;
+}
+
+// ─── ONE-TIME event wiring ────────────────────────────────────────────────────
 
 $("settings-toggle").addEventListener("click", () => {
   $("settings-panel").classList.toggle("hidden");
@@ -74,7 +241,7 @@ $("settings-name-save").addEventListener("click", async () => {
     if (currentLobbyCode)
       await updateDoc(doc(db,"lobbies",currentLobbyCode), { [`players.${currentUid}`]: n });
     msg.textContent = "Saved!";
-    setTimeout(() => { msg.textContent=""; }, 2000);
+    setTimeout(() => { msg.textContent = ""; }, 2000);
   } catch(e) { msg.textContent = "Error: "+e.message; }
 });
 
@@ -94,7 +261,7 @@ $("reset-account-btn").addEventListener("click", async () => {
     await updateDoc(doc(db,"users",currentUid), { points: 300 });
     setPointsDisplay(300);
     msg.textContent = "Reset.";
-    setTimeout(() => { msg.textContent=""; }, 2000);
+    setTimeout(() => { msg.textContent = ""; }, 2000);
   } catch(e) { msg.textContent = "Error: "+e.message; }
 });
 
@@ -111,9 +278,13 @@ $("create-lobby-btn").addEventListener("click", async () => {
       if (!(await getDoc(doc(db,"lobbies",c))).exists()) { code = c; break; }
     }
     if (!code) { err.textContent = "Could not generate a code."; return; }
+
+    const defaultWheels = ["winlose", "ghosttype", "deaths"];
     await setDoc(doc(db,"lobbies",code), {
       adminUid: currentUid, round: 1, phase: "betting",
-      results: null, payouts: null, players: { [currentUid]: name }
+      results: null, payouts: null,
+      players: { [currentUid]: name },
+      wheels:  defaultWheels,
     });
     const uSnap = await getDoc(doc(db,"users",currentUid));
     if (uSnap.exists() && !uSnap.data().username) {
@@ -154,18 +325,20 @@ $("place-bets-btn").addEventListener("click", async () => {
     if (!currentUid)       { errEl.textContent = "Not signed in yet."; return; }
     if (!currentLobbyCode) { errEl.textContent = "Not in a lobby."; return; }
 
-    const amounts = [
-      Math.max(0, parseInt($("bet-1").value) || 0),
-      Math.max(0, parseInt($("bet-2").value) || 0),
-      Math.max(0, parseInt($("bet-3").value) || 0),
-    ];
-    const picks = [ $("pick-1").value, $("pick-2").value, $("pick-3").value ];
-    const total = amounts[0] + amounts[1] + amounts[2];
+    const amounts = [];
+    const picks   = [];
+    for (let i = 1; i <= 3; i++) {
+      amounts.push(Math.max(0, parseInt($(`bet-${i}`).value) || 0));
+      picks.push($(`pick-${i}`).value);
+    }
+    const total = amounts.reduce((a,b) => a+b, 0);
 
     if (total === 0) { errEl.textContent = "Enter at least one bet amount."; return; }
-    for (let i = 0; i < 3; i++) {
+
+    // Only validate wheels that are actually active
+    for (let i = 0; i < activeWheels.length; i++) {
       if (amounts[i] > 0 && !picks[i]) {
-        errEl.textContent = `Choose a pick for Wheel ${i+1}, or set its bet to 0.`;
+        errEl.textContent = `Choose a pick for "${WHEEL_DEFS[activeWheels[i]].label}", or set its bet to 0.`;
         return;
       }
     }
@@ -205,16 +378,24 @@ $("payout-btn").addEventListener("click", async () => {
   errEl.textContent = "";
   try {
     if (!isAdmin || !currentLobbyCode) return;
-    const o1 = $("outcome-1").value;
-    const o2 = $("outcome-2").value;
-    const o3 = $("outcome-3").value;
-    if (!o1||!o2||!o3) { errEl.textContent = "Select an outcome for all three wheels."; return; }
 
-    const results  = { wheel1: o1, wheel2: o2, wheel3: o3 };
+    const outcomes = [];
+    for (let i = 1; i <= 3; i++) {
+      outcomes.push($(`outcome-${i}`) ? $(`outcome-${i}`).value : "N/A");
+    }
+
+    // Only require outcomes for active wheels
+    for (let i = 0; i < activeWheels.length; i++) {
+      if (!outcomes[i]) {
+        errEl.textContent = `Select an outcome for "${WHEEL_DEFS[activeWheels[i]].label}".`;
+        return;
+      }
+    }
+
+    const results  = { wheel1: outcomes[0], wheel2: outcomes[1], wheel3: outcomes[2] };
     const betsSnap = await getDocs(collection(db,"lobbies",currentLobbyCode,"bets"));
     const payoutRecord = calculatePayouts(betsSnap, results);
 
-    // Delete all bet docs
     const batch = writeBatch(db);
     betsSnap.forEach(b => batch.delete(b.ref));
     await batch.commit();
@@ -222,7 +403,6 @@ $("payout-btn").addEventListener("click", async () => {
     const lobbySnap = await getDoc(doc(db,"lobbies",currentLobbyCode));
     if (!lobbySnap.exists()) return;
 
-    // Write payout_done — each client's snapshot fires, each applies their own payout
     await updateDoc(doc(db,"lobbies",currentLobbyCode), {
       phase: "payout_done",
       results,
@@ -230,9 +410,9 @@ $("payout-btn").addEventListener("click", async () => {
       round:   lobbySnap.data().round,
     });
 
-    $("outcome-1").value = "";
-    $("outcome-2").value = "";
-    $("outcome-3").value = "";
+    for (let i = 1; i <= 3; i++) {
+      const el = $(`outcome-${i}`); if (el) el.value = "";
+    }
 
   } catch(e) { errEl.textContent = "Error: "+e.message; console.error("payout:", e); }
 });
@@ -389,13 +569,18 @@ function handleLobbyUpdate(data) {
   $("lobby-round-display").textContent = `Round ${data.round}`;
   isAdmin = data.adminUid === currentUid;
 
-  $("spin-btn").style.display        = isAdmin ? "inline-block" : "none";
-  $("place-bets-btn").style.display  = "inline-block";
+  $("spin-btn").style.display       = isAdmin ? "inline-block" : "none";
+  $("place-bets-btn").style.display = "inline-block";
+
+  // Update wheel config from lobby doc
+  const newWheels = data.wheels || ["winlose", "ghosttype", "deaths"];
+  const wheelsChanged = JSON.stringify(newWheels) !== JSON.stringify(activeWheels);
+  activeWheels = newWheels;
 
   currentPlayers = data.players || {};
   if (currentLobbyCode && !currentPlayers[currentUid]) { doLeave(true); return; }
 
-  // Rebuild player list
+  // Player list
   const list = $("players-list");
   list.innerHTML = "";
   for (const [uid, name] of Object.entries(currentPlayers)) {
@@ -416,11 +601,17 @@ function handleLobbyUpdate(data) {
     list.appendChild(tag);
   }
 
-  rebuildDeathsDropdown(currentPlayers);
-
   if (data.phase === "betting") {
     $("phase-betting").classList.remove("hidden");
     $("phase-results").classList.add("hidden");
+
+    // Show/hide wheel config panel (admin only, betting phase only)
+    const cfgSection = $("wheel-config-section");
+    if (cfgSection) cfgSection.classList.toggle("hidden", !isAdmin);
+
+    // Rebuild betting cards whenever wheels or players change
+    renderBettingCards();
+    if (isAdmin) renderWheelConfig();
 
   } else if (data.phase === "results") {
     $("phase-betting").classList.add("hidden");
@@ -428,7 +619,7 @@ function handleLobbyUpdate(data) {
     if (isAdmin) {
       $("tbd-msg").classList.add("hidden");
       $("admin-outcome-section").classList.remove("hidden");
-      rebuildOutcome3Dropdown(currentPlayers);
+      renderOutcomeSelectors();
     } else {
       $("tbd-msg").classList.remove("hidden");
       $("admin-outcome-section").classList.add("hidden");
@@ -442,7 +633,7 @@ function handleLobbyUpdate(data) {
   }
 }
 
-// ─── Each client applies their own payout ────────────────────────────────────
+// ─── Apply own payout ─────────────────────────────────────────────────────────
 async function applyMyPayoutAndShowPopup(data) {
   try {
     const myAmount = (data.payouts || {})[currentUid] || 0;
@@ -470,41 +661,27 @@ async function kickPlayer(uid) {
   try { await remove(ref(rtdb,`presence/${currentLobbyCode}/${uid}`)); } catch(_) {}
 }
 
-// ─── Deaths dropdowns ─────────────────────────────────────────────────────────
-function buildDeathOptions(selId, placeholder, players) {
-  const sel = $(selId);
-  if (!sel) return;
-  const cur = sel.value;
-  sel.innerHTML = `<option value="">${placeholder}</option><option value="None Dead">None Dead</option>`;
-  for (const name of Object.values(players)) {
-    const o = document.createElement("option");
-    o.value = o.textContent = name;
-    sel.appendChild(o);
-  }
-  const o = document.createElement("option");
-  o.value = o.textContent = "All Dead";
-  sel.appendChild(o);
-  if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
-}
-function rebuildDeathsDropdown(p)   { buildDeathOptions("pick-3",    "— Pick —",   p); }
-function rebuildOutcome3Dropdown(p) { buildDeathOptions("outcome-3", "— Select —", p); }
-
 // ─── My bets display ──────────────────────────────────────────────────────────
 function renderMyBets(bets) {
   const mb = $("my-bets-display");
   if (!mb) return;
   if (!bets) { mb.innerHTML = `<p class="my-bets-empty">No bets placed yet.</p>`; return; }
-  const labels = ["Win / Lose","Ghost Type","Deaths"];
-  const rows = ["wheel1","wheel2","wheel3"].map((k,i) => {
-    const b = bets[k];
-    if (!b || b.amount === 0) return null;
+
+  const rows = WHEEL_KEYS.map((k, i) => {
+    const b       = bets[k];
+    const typeKey = activeWheels[i];
+    if (!b || b.amount === 0 || !typeKey) return null;
+    const label = WHEEL_DEFS[typeKey]?.label || `Wheel ${i+1}`;
     return `<div class="my-bet-row">
-      <span class="my-bet-label">${labels[i]}</span>
-      <span class="my-bet-pick">${b.pick||"—"}</span>
+      <span class="my-bet-label">${label}</span>
+      <span class="my-bet-pick">${b.pick || "—"}</span>
       <span class="my-bet-amount">${b.amount} ${currencyLabel}</span>
     </div>`;
   }).filter(Boolean);
-  mb.innerHTML = rows.length ? rows.join("") : `<p class="my-bets-empty">No bets placed yet.</p>`;
+
+  mb.innerHTML = rows.length
+    ? rows.join("")
+    : `<p class="my-bets-empty">No bets placed yet.</p>`;
 }
 
 // ─── Payout math ──────────────────────────────────────────────────────────────
@@ -516,16 +693,21 @@ function calculatePayouts(betsSnap, results) {
     allBets[b.id] = d;
     totalPool += (d.wheel1?.amount||0) + (d.wheel2?.amount||0) + (d.wheel3?.amount||0);
   });
+
   const winStakes = {}; let totalWin = 0;
   for (const [uid, bets] of Object.entries(allBets)) {
     let stake = 0;
-    for (const key of ["wheel1","wheel2","wheel3"]) {
-      const b = bets[key];
-      if (b && b.amount > 0 && b.pick && b.pick === results[key]) stake += b.amount;
-    }
+    WHEEL_KEYS.forEach((k, i) => {
+      const b = bets[k];
+      // Only score wheels that were active this round
+      if (i >= activeWheels.length) return;
+      if (b && b.amount > 0 && b.pick && b.pick === results[k]) stake += b.amount;
+    });
     if (stake > 0) { winStakes[uid] = stake; totalWin += stake; }
   }
+
   if (totalWin === 0) return {};
+
   const losingPool = totalPool - totalWin;
   const payouts = {};
   for (const [uid, stake] of Object.entries(winStakes)) {
@@ -539,21 +721,24 @@ function showPayoutPopup(data) {
   const results = data.results || {};
   const payouts = data.payouts || {};
   const players = data.players || {};
+  const wheels  = data.wheels  || activeWheels;
 
-  $("popup-results-display").innerHTML =
-    ["wheel1","wheel2","wheel3"].map((k,i) =>
-      `<div class="popup-result-row">
-        <span class="popup-result-label">${["Win / Lose","Ghost Type","Deaths"][i]}</span>
-        <span class="popup-result-value">${results[k]||"—"}</span>
-      </div>`
-    ).join("");
+  $("popup-results-display").innerHTML = WHEEL_KEYS.map((k, i) => {
+    const typeKey = wheels[i];
+    if (!typeKey) return "";
+    const label = WHEEL_DEFS[typeKey]?.label || `Wheel ${i+1}`;
+    return `<div class="popup-result-row">
+      <span class="popup-result-label">${label}</span>
+      <span class="popup-result-value">${results[k] || "—"}</span>
+    </div>`;
+  }).join("");
 
   $("popup-payouts-display").innerHTML =
     Object.keys(payouts).length === 0
       ? `<p style="color:#aaa;text-align:center;">No winners this round.</p>`
       : Object.entries(payouts).map(([uid,amt]) =>
           `<div class="popup-payout-row">
-            <span>${players[uid]||"Player"}</span>
+            <span>${players[uid] || "Player"}</span>
             <span class="payout-amount">+${amt} ${currencyLabel}</span>
           </div>`
         ).join("");

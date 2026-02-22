@@ -13,7 +13,7 @@
     </head>
     <body>
 
-        <!-- ===================== USER SETTINGS (top-right) ===================== -->
+        <!-- ===================== USER SETTINGS ===================== -->
         <div id="user-settings-card" class="hidden">
             <button id="settings-toggle" title="Settings">⚙</button>
             <div id="settings-panel" class="hidden">
@@ -34,7 +34,7 @@
             </div>
         </div>
 
-        <!-- ===================== LANDING SCREEN ===================== -->
+        <!-- ===================== LANDING ===================== -->
         <div id="screen-landing">
             <h1>Phasmophobia Gambling</h1>
             <div id="landing-card">
@@ -57,7 +57,7 @@
             </div>
         </div>
 
-        <!-- ===================== LOBBY SCREEN ===================== -->
+        <!-- ===================== LOBBY ===================== -->
         <div id="screen-lobby" class="hidden">
 
             <h1>Phasmophobia Gambling</h1>
@@ -82,68 +82,19 @@
 
             <!-- ── Betting phase ── -->
             <div id="phase-betting">
-                <main id="main">
 
-                    <!-- Wheel 1: Win/Lose -->
-                    <div class="wheel-card">
-                        <p class="wheel-label">Win / Lose</p>
-                        <div class="wheel" id="wheel1"><p>?</p></div>
-                        <select class="pick-select" id="pick-1">
-                            <option value="">— Pick —</option>
-                            <option value="Win">Win</option>
-                            <option value="Lose">Lose</option>
-                        </select>
-                        <input class="bet-input" id="bet-1" type="number" placeholder="Bet..." min="0" value="0" />
-                    </div>
+                <!-- Wheel type config — admin only, hidden for non-admins -->
+                <div id="wheel-config-section" class="hidden">
+                    <p class="section-label" style="text-align:center; margin-bottom:8px;">Configure Wheels</p>
+                    <p style="text-align:center; color:#888; font-size:0.82em; margin-bottom:12px;">
+                        Wheel 1 is required. Wheels 2 &amp; 3 are optional.
+                    </p>
+                    <div id="wheel-config-panel"></div>
+                    <p id="wheel-config-error" style="color:#e06c6c; text-align:center; margin-top:6px; font-size:0.85em;"></p>
+                </div>
 
-                    <!-- Wheel 2: Ghost Type -->
-                    <div class="wheel-card">
-                        <p class="wheel-label">Ghost Type</p>
-                        <div class="wheel" id="wheel2"><p>?</p></div>
-                        <select class="pick-select" id="pick-2">
-                            <option value="">— Pick —</option>
-                            <option value="Banshee">Banshee</option>
-                            <option value="Dayan">Dayan</option>
-                            <option value="Deogen">Deogen</option>
-                            <option value="Demon">Demon</option>
-                            <option value="Gallu">Gallu</option>
-                            <option value="Goryo">Goryo</option>
-                            <option value="Hantu">Hantu</option>
-                            <option value="Jinn">Jinn</option>
-                            <option value="Mare">Mare</option>
-                            <option value="Moroi">Moroi</option>
-                            <option value="Myling">Myling</option>
-                            <option value="Obake">Obake</option>
-                            <option value="Obambo">Obambo</option>
-                            <option value="Oni">Oni</option>
-                            <option value="Onryo">Onryo</option>
-                            <option value="Phantom">Phantom</option>
-                            <option value="Poltergeist">Poltergeist</option>
-                            <option value="Raiju">Raiju</option>
-                            <option value="Revenant">Revenant</option>
-                            <option value="Shade">Shade</option>
-                            <option value="Spirit">Spirit</option>
-                            <option value="Thaye">Thaye</option>
-                            <option value="The Mimic">The Mimic</option>
-                            <option value="The Twins">The Twins</option>
-                            <option value="Wraith">Wraith</option>
-                            <option value="Yokai">Yokai</option>
-                            <option value="Yurei">Yurei</option>
-                        </select>
-                        <input class="bet-input" id="bet-2" type="number" placeholder="Bet..." min="0" value="0" />
-                    </div>
-
-                    <!-- Wheel 3: Deaths (options populated dynamically) -->
-                    <div class="wheel-card">
-                        <p class="wheel-label">Deaths</p>
-                        <div class="wheel" id="wheel3"><p>?</p></div>
-                        <select class="pick-select" id="pick-3">
-                            <option value="">— Pick —</option>
-                        </select>
-                        <input class="bet-input" id="bet-3" type="number" placeholder="Bet..." min="0" value="0" />
-                    </div>
-
-                </main>
+                <!-- Wheel betting cards — rebuilt dynamically by JS -->
+                <main id="main"></main>
 
                 <!-- Your current bets summary -->
                 <div id="my-bets-section">
@@ -156,11 +107,9 @@
                 <!-- Bet actions -->
                 <div id="btn">
                     <p id="bet-error"></p>
-                    <!-- Shown to ALL players to lock in + deduct their bets -->
                     <button class="spin" id="place-bets-btn">Place Bets</button>
-                    <!-- Admin only: lock everyone and move to results phase -->
                     <button class="spin" id="spin-btn" style="display:none; margin-left:12px;">Fix Bets</button>
-                    <p id="bets-placed-msg" class="hidden" style="color:#7fd67f; margin-top:8px;">Bets placed!</p>
+                    <p id="bets-placed-msg" class="hidden" style="color:#7fd67f; margin-top:8px;">Bets placed! ✓</p>
                 </div>
             </div>
 
@@ -168,69 +117,15 @@
             <div id="phase-results" class="hidden">
                 <p class="section-label" style="text-align:center; margin-top:30px;">Results</p>
 
-                <!-- Non-admin -->
                 <p id="tbd-msg" class="hidden" style="text-align:center; color:#aaa; margin:16px 0;">
                     Waiting for admin to confirm results...
                 </p>
 
-                <!-- Admin outcome selectors -->
                 <div id="admin-outcome-section" class="hidden">
                     <p class="section-label" style="text-align:center; margin-bottom:12px;">What actually happened?</p>
-                    <div id="outcome-selectors">
+                    <!-- Outcome selectors rebuilt dynamically by JS -->
+                    <div id="outcome-selectors"></div>
 
-                        <div class="outcome-row">
-                            <span class="outcome-label">Win / Lose</span>
-                            <select class="outcome-select" id="outcome-1">
-                                <option value="">— Select —</option>
-                                <option value="Win">Win</option>
-                                <option value="Lose">Lose</option>
-                            </select>
-                        </div>
-
-                        <div class="outcome-row">
-                            <span class="outcome-label">Ghost Type</span>
-                            <select class="outcome-select" id="outcome-2">
-                                <option value="">— Select —</option>
-                                <option value="Banshee">Banshee</option>
-                                <option value="Dayan">Dayan</option>
-                                <option value="Deogen">Deogen</option>
-                                <option value="Demon">Demon</option>
-                                <option value="Gallu">Gallu</option>
-                                <option value="Goryo">Goryo</option>
-                                <option value="Hantu">Hantu</option>
-                                <option value="Jinn">Jinn</option>
-                                <option value="Mare">Mare</option>
-                                <option value="Moroi">Moroi</option>
-                                <option value="Myling">Myling</option>
-                                <option value="Obake">Obake</option>
-                                <option value="Obambo">Obambo</option>
-                                <option value="Oni">Oni</option>
-                                <option value="Onryo">Onryo</option>
-                                <option value="Phantom">Phantom</option>
-                                <option value="Poltergeist">Poltergeist</option>
-                                <option value="Raiju">Raiju</option>
-                                <option value="Revenant">Revenant</option>
-                                <option value="Shade">Shade</option>
-                                <option value="Spirit">Spirit</option>
-                                <option value="Thaye">Thaye</option>
-                                <option value="The Mimic">The Mimic</option>
-                                <option value="The Twins">The Twins</option>
-                                <option value="Wraith">Wraith</option>
-                                <option value="Yokai">Yokai</option>
-                                <option value="Yurei">Yurei</option>
-                            </select>
-                        </div>
-
-                        <div class="outcome-row">
-                            <span class="outcome-label">Deaths</span>
-                            <select class="outcome-select" id="outcome-3">
-                                <option value="">— Select —</option>
-                            </select>
-                        </div>
-
-                    </div>
-
-                    <!-- Centered payout button -->
                     <div id="payout-action">
                         <p id="payout-error"></p>
                         <button id="payout-btn" class="btn-primary">Confirm &amp; Payout</button>
