@@ -31,7 +31,7 @@ const WHEEL_DEFS = {
   deaths:       { label: "Deaths",        options: null }, // dynamic: player names
   perfectrun:   { label: "Perfect Run",   options: ["Yes", "No"] },
   ghostspeed:   { label: "Ghost Speed",   options: ["Slow", "Medium", "Fast", "Variable"] },
-  cursedobject: { label: "Cursed Object", options: ["Music Box","Ouija Board","Summoning Circle","Voodoo Doll","Monkey's Paw","Tarot Cards","Haunted Mirror"] },
+  cursedobject: { label: "Cursed Object", options: ["Music Box","Ouija Board","Summoning Circle","Voodoo Doll","Monkey's Paw","Tarot Cards","Haunted Mirror","None"] },
 };
 
 const WHEEL_KEYS = ["wheel1", "wheel2", "wheel3"];
