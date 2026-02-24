@@ -87,12 +87,11 @@ function renderBettingCards() {
     card.className = "wheel-card";
     card.innerHTML = `
       <p class="wheel-label">${def.label}</p>
-      <div class="wheel" id="wheel${i+1}"><p>?</p></div>
       <select class="pick-select" id="pick-${i+1}">
         <option value="">— Pick —</option>
         ${options.map(o => `<option value="${o}">${o}</option>`).join("")}
       </select>
-      <input class="bet-input" id="bet-${i+1}" type="number" placeholder="Bet..." min="0" value="0" />
+      <input class="bet-input" id="bet-${i+1}" type="number" placeholder="Your bet here..." min="0" />
     `;
     main.appendChild(card);
   });
@@ -217,11 +216,11 @@ async function onWheelConfigChange() {
 // ─── Reset betting UI ─────────────────────────────────────────────────────────
 function resetBettingUI() {
   for (let i = 1; i <= 3; i++) {
-    const b = $(`bet-${i}`);   if (b) b.value = "0";
+    const b = $(`bet-${i}`);   if (b) b.value = "";
     const p = $(`pick-${i}`);  if (p) p.value = "";
   }
   const err = $("bet-error"); if (err) err.textContent = "";
-  document.querySelectorAll(".wheel").forEach(el => { el.innerHTML = "<p>?</p>"; });
+  document.querySelectorAll(".wheel").forEach(el => { el.innerHTML = ""; });
   const mb = $("my-bets-display");
   if (mb) mb.innerHTML = `<p class="my-bets-empty">No bets placed yet.</p>`;
 }
