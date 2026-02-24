@@ -26,7 +26,7 @@ const rtdb = getDatabase(app);
 // ─── Wheel definitions ────────────────────────────────────────────────────────
 // "deaths" options are built dynamically from player names — options: null means dynamic.
 const WHEEL_DEFS = {
-  winlose:      { label: "Win / Lose",    options: ["Win", "Lose"] },
+  winlose:      { label: "Win / Lose",    options: ["Win", "Lose", "Partial Win"] },
   ghosttype:    { label: "Ghost Type",    options: ["Banshee","Dayan","Deogen","Demon","Gallu","Goryo","Hantu","Jinn","Mare","Moroi","Myling","Obake","Obambo","Oni","Onryo","Phantom","Poltergeist","Raiju","Revenant","Shade","Spirit","Thaye","The Mimic","The Twins","Wraith","Yokai","Yurei"] },
   deaths:       { label: "Deaths",        options: null }, // dynamic: player names
   perfectrun:   { label: "Perfect Run",   options: ["Yes", "No"] },
@@ -691,6 +691,7 @@ function calculatePayouts(betsSnap, results) {
   betsSnap.forEach(b => {
     const d = b.data();
     allBets[b.id] = d;
+
     totalPool += (d.wheel1?.amount||0) + (d.wheel2?.amount||0) + (d.wheel3?.amount||0);
   });
 
