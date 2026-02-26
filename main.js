@@ -120,14 +120,20 @@ async function resetCheatSheet(){
   try{await updateDoc(doc(db,"lobbies",currentLobbyCode),reset);}
   catch(e){console.error("resetCheatSheet:",e);}
 }
+let csIsOpen=false;
 function openCheatSheet(){
+  if(csIsOpen)return;
+  csIsOpen=true;
   $("cs-overlay").classList.remove("hidden");
-  requestAnimationFrame(()=>$("cs-overlay").classList.add("cs-visible"));
+  // double rAF ensures the browser has painted the unhidden state before adding the transition class
+  requestAnimationFrame(()=>requestAnimationFrame(()=>$("cs-overlay").classList.add("cs-visible")));
 }
 function closeCheatSheet(){
-  $("cs-overlay").classList.remove("cs-visible","hidden");
-  // wait for transition then hide
-  $("cs-overlay").addEventListener("transitionend",()=>$("cs-overlay").classList.add("hidden"),{once:true});
+  if(!csIsOpen)return;
+  csIsOpen=false;
+  const el=$("cs-overlay");
+  el.classList.remove("cs-visible");
+  el.addEventListener("transitionend",()=>{ if(!csIsOpen)el.classList.add("hidden"); },{once:true});
 }
 
 // Betting cards
@@ -200,7 +206,10 @@ $("settings-name-save").addEventListener("click",async()=>{
   try{
     const n=$("settings-name-input").value.trim();if(!n){msg.textContent="Enter a name.";return;}
     await updateDoc(doc(db,"users",currentUid),{username:n});
-    if(currentLobbyCode)await updateDoc(doc(db,"lobbies",currentLobbyCode),{[`players.${currentUid}`]:n});
+    if(currentLobbyCode){
+      const ls=await getDoc(doc(db,"lobbies",currentLobbyCode));
+      if(ls.exists()){const pm={...ls.data().players};pm[currentUid]=n;await updateDoc(doc(db,"lobbies",currentLobbyCode),{players:pm});}
+    }
     msg.textContent="Saved!";setTimeout(()=>{msg.textContent="";},2000);
   }catch(e){msg.textContent="Error: "+e.message;}
 });
@@ -240,8 +249,9 @@ $("wheel-config-save-btn").addEventListener("click",async()=>{
   if(new Set(wheels).size!==wheels.length){errEl.textContent="Each wheel must be a different type.";return;}
   errEl.textContent="";
   try{
-    await updateDoc(doc(db,"lobbies",currentLobbyCode),{wheels});
+    await updateDoc(doc(db,"lobbies",currentLobbyCode),{wheels,wheelConfigDone:true});
     msgEl.textContent="Saved!";setTimeout(()=>{msgEl.textContent="";},2000);
+    $("wheel-config-section").classList.add("hidden");
   }catch(e){errEl.textContent="Error: "+e.message;}
 });
 
@@ -277,7 +287,10 @@ $("join-lobby-btn").addEventListener("click",async()=>{
   try{
     const snap=await getDoc(doc(db,"lobbies",code));
     if(!snap.exists()){err.textContent="Lobby not found.";return;}
-    await updateDoc(doc(db,"lobbies",code),{[`players.${currentUid}`]:name});
+    // Merge the new player into the existing players map atomically
+    const existingPlayers=snap.data().players||{};
+    existingPlayers[currentUid]=name;
+    await updateDoc(doc(db,"lobbies",code),{players:existingPlayers});
     const uSnap=await getDoc(doc(db,"users",currentUid));
     if(uSnap.exists()&&!uSnap.data().username){await updateDoc(doc(db,"users",currentUid),{username:name});$("settings-name-input").value=name;}
     enterLobby(code);
@@ -466,8 +479,9 @@ function handleLobbyUpdate(data){
   if(data.phase==="betting"){
     closeCheatSheet();
     $("phase-betting").classList.remove("hidden");
-    const cfgSection=$("wheel-config-section");if(cfgSection)cfgSection.classList.toggle("hidden",!isAdmin);
-    renderBettingCards();if(isAdmin)renderWheelConfig();
+    const cfgSection=$("wheel-config-section");
+    if(cfgSection)cfgSection.classList.toggle("hidden",!isAdmin||!!data.wheelConfigDone);
+    renderBettingCards();if(isAdmin&&!data.wheelConfigDone)renderWheelConfig();
     $("spin-btn").style.display=isAdmin?"inline-block":"none";
     $("place-bets-btn").style.display="inline-block";
   }else if(data.phase==="playing"){
