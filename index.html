@@ -1,200 +1,192 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="utf-8">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <title>Phasmophobia Gambling</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="/styles.css">
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Spectral+SC:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
-        <script type="module" src="/main.js"></script>
-    </head>
-    <body>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Phasmophobia Gambling</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Spectral+SC:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+    <script type="module" src="/main.js"></script>
+</head>
+<body>
 
-        <!-- ===================== USER SETTINGS ===================== -->
-        <div id="user-settings-card" class="hidden">
-            <button id="settings-toggle" title="Settings">&#9881;</button>
-            <div id="settings-panel" class="hidden">
-                <p class="section-label">Username</p>
-                <input type="text" id="settings-name-input" maxlength="20" placeholder="New username..." />
-                <button id="settings-name-save" class="btn-primary">Save Username</button>
+<!-- ===================== USER SETTINGS ===================== -->
+<div id="user-settings-card" class="hidden">
+    <button id="settings-toggle" title="Settings">&#9881;</button>
+    <div id="settings-panel" class="hidden">
+        <p class="section-label">Username</p>
+        <input type="text" id="settings-name-input" maxlength="20" placeholder="New username..." />
+        <button id="settings-name-save" class="btn-primary">Save Username</button>
 
-                <p class="section-label" style="margin-top:14px;">Custom Lobby Code</p>
-                <input type="text" id="settings-lobby-code-input" maxlength="30" placeholder="e.g. Sam &amp; Sam's Game" />
-                <p class="section-label" style="margin-top:2px; font-size:10px; color:#555;">Used when you create a lobby. Leave blank for a random 4-digit code.</p>
-                <button id="settings-lobby-code-save" class="btn-primary">Save Lobby Code</button>
+        <p class="section-label" style="margin-top:14px;">Custom Lobby Code</p>
+        <input type="text" id="settings-lobby-code-input" maxlength="30" placeholder="e.g. Sam and Sams Game" />
+        <p style="font-size:10px; color:#555; margin-top:2px;">Used when you create a lobby. Leave blank for a random 4-digit code.</p>
+        <button id="settings-lobby-code-save" class="btn-primary">Save Lobby Code</button>
 
-                <p class="section-label" style="margin-top:14px;">Currency Display</p>
-                <select id="currency-select">
-                    <option value="Points">Points</option>
-                    <option value="Ghosties">Ghosties</option>
-                    <option value="EMF Readings">EMF Readings</option>
-                    <option value="Fingerprints">Fingerprints</option>
-                </select>
+        <p class="section-label" style="margin-top:14px;">Currency Display</p>
+        <select id="currency-select">
+            <option value="Points">Points</option>
+            <option value="Ghosties">Ghosties</option>
+            <option value="EMF Readings">EMF Readings</option>
+            <option value="Fingerprints">Fingerprints</option>
+        </select>
 
-                <button id="reset-account-btn" class="btn-danger" style="margin-top:14px;">Reset Account</button>
-                <p id="settings-msg"></p>
+        <button id="reset-account-btn" class="btn-danger" style="margin-top:14px;">Reset Account</button>
+        <p id="settings-msg"></p>
+    </div>
+</div>
+
+<!-- ===================== LANDING ===================== -->
+<div id="screen-landing">
+    <h1>Phasmophobia Gambling</h1>
+    <div id="landing-card">
+        <p class="section-label">Your Name</p>
+        <input type="text" id="display-name-input" placeholder="e.g. tacocat" maxlength="20" />
+        <div id="landing-actions">
+            <div class="landing-half">
+                <p class="section-label">Create Lobby</p>
+                <button id="create-lobby-btn" class="btn-primary">Create</button>
+            </div>
+            <div class="landing-divider"></div>
+            <div class="landing-half">
+                <p class="section-label">Join Lobby</p>
+                <input type="text" id="join-code-input" placeholder="Lobby code..." maxlength="30" />
+                <button id="join-lobby-btn" class="btn-primary">Join</button>
+            </div>
+        </div>
+        <p id="landing-error"></p>
+    </div>
+</div>
+
+<!-- ===================== LOBBY ===================== -->
+<div id="screen-lobby" class="hidden">
+    <h1>Phasmophobia Gambling</h1>
+
+    <div id="lobby-header">
+        <div id="lobby-meta">
+            <span id="lobby-code-display"></span>
+            <span id="lobby-round-display"></span>
+        </div>
+        <div id="lobby-stats">
+            <span id="points-display">-- --</span>
+            <span id="prize-pool-display">Prize Pool: 0</span>
+        </div>
+        <button id="leave-lobby-btn" class="btn-danger-sm">Leave</button>
+    </div>
+
+    <!-- Players -->
+    <div id="players-section">
+        <p class="section-label">Players</p>
+        <div id="players-list"></div>
+    </div>
+
+    <!-- BETTING PHASE -->
+    <div id="phase-betting" class="hidden">
+        <div id="wheel-config-section" class="hidden">
+            <p class="section-label" style="text-align:center; margin-bottom:8px;">Configure Wheels</p>
+            <p style="text-align:center; color:#888; font-size:0.82em; margin-bottom:12px;">
+                Wheel 1 is required. Wheels 2 &amp; 3 are optional.
+            </p>
+            <div id="wheel-config-panel"></div>
+            <p id="wheel-config-error" style="color:#e06c6c; text-align:center; margin-top:6px; font-size:0.85em;"></p>
+            <div style="text-align:center; margin-top:12px;">
+                <button id="wheel-config-save-btn" class="btn-primary" style="width:auto; display:inline-block; padding:8px 28px;">Save Wheels</button>
+                <p id="wheel-config-saved-msg" style="color:#7fd67f; font-size:12px; margin-top:6px; min-height:16px;"></p>
             </div>
         </div>
 
-        <!-- ===================== LANDING ===================== -->
-        <div id="screen-landing">
-            <h1>Phasmophobia Gambling</h1>
-            <div id="landing-card">
-                <p class="section-label">Your Name</p>
-                <input type="text" id="display-name-input" placeholder="e.g. tacocat" maxlength="20" />
-                <div id="landing-actions">
-                    <div class="landing-half">
-                        <p class="section-label">Create Lobby</p>
-                        <button id="create-lobby-btn" class="btn-primary">Create</button>
-                    </div>
-                    <div class="landing-divider"></div>
-                    <div class="landing-half">
-                        <p class="section-label">Join Lobby</p>
-                        <input type="text" id="join-code-input" placeholder="Lobby code..." maxlength="30" />
-                        <button id="join-lobby-btn" class="btn-primary">Join</button>
-                    </div>
-                </div>
-                <p id="landing-error"></p>
+        <main id="main"></main>
+
+        <div id="my-bets-section">
+            <p class="section-label">Your Bets</p>
+            <div id="my-bets-display">
+                <p class="my-bets-empty">No bets placed yet.</p>
             </div>
         </div>
 
-        <!-- ===================== LOBBY ===================== -->
-        <div id="screen-lobby" class="hidden">
-
-            <h1>Phasmophobia Gambling</h1>
-
-            <div id="lobby-header">
-                <div id="lobby-meta">
-                    <span id="lobby-code-display"></span>
-                    <span id="lobby-round-display"></span>
-                </div>
-                <div id="lobby-stats">
-                    <span id="points-display">-- --</span>
-                    <span id="prize-pool-display">Prize Pool: 0</span>
-                </div>
-                <button id="leave-lobby-btn" class="btn-danger-sm">Leave</button>
-            </div>
-
-            <!-- Players -->
-            <div id="players-section">
-                <p class="section-label">Players</p>
-                <div id="players-list"></div>
-            </div>
-
-            <!-- ══════════════ BETTING PHASE ══════════════ -->
-            <div id="phase-betting" class="hidden">
-                <div id="wheel-config-section" class="hidden">
-                    <p class="section-label" style="text-align:center; margin-bottom:8px;">Configure Wheels</p>
-                    <p style="text-align:center; color:#888; font-size:0.82em; margin-bottom:12px;">
-                        Wheel 1 is required. Wheels 2 &amp; 3 are optional.
-                    </p>
-                    <div id="wheel-config-panel"></div>
-                    <p id="wheel-config-error" style="color:#e06c6c; text-align:center; margin-top:6px; font-size:0.85em;"></p>
-                    <div style="text-align:center; margin-top:12px;">
-                        <button id="wheel-config-save-btn" class="btn-primary" style="width:auto; display:inline-block; padding:8px 28px;">Save Wheels</button>
-                        <p id="wheel-config-saved-msg" style="color:#7fd67f; font-size:12px; margin-top:6px; min-height:16px;"></p>
-                    </div>
-                </div>
-
-                <main id="main"></main>
-
-                <div id="my-bets-section">
-                    <p class="section-label">Your Bets</p>
-                    <div id="my-bets-display">
-                        <p class="my-bets-empty">No bets placed yet.</p>
-                    </div>
-                </div>
-
-                <div id="btn">
-                    <p id="bet-error"></p>
-                    <button class="spin" id="place-bets-btn">Place Bets</button>
-                    <button class="spin" id="spin-btn" style="display:none; margin-left:12px;">Fix Bets</button>
-                    <p id="bets-placed-msg" class="hidden" style="color:#7fd67f; margin-top:8px;">Bets placed!</p>
-                </div>
-            </div>
-
-            <!-- ══════════════ PLAYING PHASE ══════════════ -->
-            <!-- Admin End Round button sits in normal flow -->
-            <div id="phase-playing" class="hidden">
-                <div style="text-align:center; margin-bottom:16px;">
-                    <button id="end-round-btn" class="spin" style="display:none;">End Round</button>
-                </div>
-            </div>
-
-            <!-- ══════════════ RESULTS PHASE ══════════════ -->
-            <div id="phase-results" class="hidden">
-                <p class="section-label" style="text-align:center; margin-top:30px;">Results</p>
-                <p id="tbd-msg" class="hidden" style="text-align:center; color:#aaa; margin:16px 0;">
-                    Waiting for admin to confirm results...
-                </p>
-                <div id="admin-outcome-section" class="hidden">
-                    <p class="section-label" style="text-align:center; margin-bottom:12px;">What actually happened?</p>
-                    <div id="outcome-selectors"></div>
-                    <div id="payout-action">
-                        <p id="payout-error"></p>
-                        <button id="payout-btn" class="btn-primary">Confirm &amp; Payout</button>
-                    </div>
-                </div>
-            </div>
-
+        <div id="btn">
+            <p id="bet-error"></p>
+            <button class="spin" id="place-bets-btn">Place Bets</button>
+            <button class="spin" id="spin-btn" style="display:none; margin-left:12px;">Fix Bets</button>
+            <p id="bets-placed-msg" class="hidden" style="color:#7fd67f; margin-top:8px;">Bets placed!</p>
         </div>
+    </div>
 
-        <!-- ===================== CHEAT SHEET OVERLAY ===================== -->
-        <!-- Slides in over the full screen during playing phase -->
-        <div id="cs-overlay" class="hidden">
+    <!-- PLAYING PHASE (just the end round button; cheat sheet is the full-screen overlay) -->
+    <div id="phase-playing" class="hidden">
+        <div style="text-align:center; margin-top:30px;">
+            <button id="end-round-btn" class="spin" style="display:none;">End Round</button>
+        </div>
+    </div>
 
-            <!-- Dropdown bar at the top -->
-            <div id="cs-topbar">
-                <div id="cs-topbar-collapsed">
-                    <span id="cs-topbar-lobby-code"></span>
-                    <button id="cs-topbar-toggle" title="Show connection info">&#9660;</button>
-                    <button id="cs-reset-btn">Reset Evidence</button>
-                    <span id="cs-ghost-count"></span>
-                    <button id="cs-end-round-btn" class="spin" style="display:none;">End Round</button>
-                </div>
-                <div id="cs-topbar-expanded" class="hidden">
-                    <!-- Overlay link -->
-                    <div id="desktop-link-bar">
-                        <span id="link-status-dot"></span>
-                        <span id="link-status-text">Not connected</span>
-                        <input id="desktop-link-input" type="text" maxlength="4" placeholder="4-digit link code" />
-                        <button id="desktop-link-btn" class="btn-primary">Connect Overlay</button>
-                        <a id="overlay-download-btn" href="https://phasmophobiagambling.pages.dev/PhasOverlay-Setup.exe" download>Download Overlay</a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Body: sidebar + ghost grid -->
-            <div id="cs-body">
-
-                <!-- Sidebar: evidence buttons -->
-                <div id="cs-sidebar">
-                    <p class="section-label" style="margin-bottom:12px;">Evidence</p>
-                    <div id="cs-evidence-panel"></div>
-                    <p id="cs-hint">Click to confirm &middot; again to rule out &middot; again to clear</p>
-                </div>
-
-                <!-- Main: ghost grid -->
-                <div id="cs-main">
-                    <div id="cs-ghost-grid"></div>
-                </div>
-
+    <!-- RESULTS PHASE -->
+    <div id="phase-results" class="hidden">
+        <p class="section-label" style="text-align:center; margin-top:30px;">Results</p>
+        <p id="tbd-msg" class="hidden" style="text-align:center; color:#aaa; margin:16px 0;">
+            Waiting for admin to confirm results...
+        </p>
+        <div id="admin-outcome-section" class="hidden">
+            <p class="section-label" style="text-align:center; margin-bottom:12px;">What actually happened?</p>
+            <div id="outcome-selectors"></div>
+            <div id="payout-action">
+                <p id="payout-error"></p>
+                <button id="payout-btn" class="btn-primary">Confirm &amp; Payout</button>
             </div>
         </div>
+    </div>
 
-        <!-- ===================== PAYOUT POPUP ===================== -->
-        <div id="payout-popup" class="hidden">
-            <div id="payout-popup-inner">
-                <p class="popup-title">Round Over!</p>
-                <div id="popup-results-display"></div>
-                <div id="popup-payouts-display"></div>
-                <p id="popup-your-payout"></p>
-                <button id="popup-close-btn" class="btn-primary" style="margin-top:16px; max-width:160px;">Close</button>
+</div>
+
+<!-- ===================== CHEAT SHEET FULLSCREEN OVERLAY ===================== -->
+<div id="cs-overlay" class="hidden">
+
+    <!-- Collapsible top bar -->
+    <div id="cs-topbar">
+        <div id="cs-topbar-collapsed">
+            <span id="cs-topbar-lobby-code"></span>
+            <button id="cs-topbar-toggle" title="Show connection options">&#9660;</button>
+            <span id="cs-ghost-count"></span>
+            <button id="cs-reset-btn">Reset Evidence</button>
+            <button id="cs-end-round-btn" class="spin" style="display:none;">End Round</button>
+        </div>
+        <div id="cs-topbar-expanded" class="hidden">
+            <div id="desktop-link-bar">
+                <span id="link-status-dot"></span>
+                <span id="link-status-text">Not connected</span>
+                <input id="desktop-link-input" type="text" maxlength="4" placeholder="4-digit link code" />
+                <button id="desktop-link-btn" class="btn-primary">Connect Overlay</button>
+                <a id="overlay-download-btn" href="https://phasmophobiagambling.pages.dev/PhasOverlay-Setup.exe" download>Download Overlay</a>
             </div>
         </div>
+    </div>
 
-    </body>
+    <!-- Body: sidebar + ghost grid -->
+    <div id="cs-body">
+        <div id="cs-sidebar">
+            <p class="section-label" style="margin-bottom:12px;">Evidence</p>
+            <div id="cs-evidence-panel"></div>
+            <p id="cs-hint">Click to confirm &middot; again to rule out &middot; again to clear</p>
+        </div>
+        <div id="cs-main">
+            <div id="cs-ghost-grid"></div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ===================== PAYOUT POPUP ===================== -->
+<div id="payout-popup" class="hidden">
+    <div id="payout-popup-inner">
+        <p class="popup-title">Round Over!</p>
+        <div id="popup-results-display"></div>
+        <div id="popup-payouts-display"></div>
+        <p id="popup-your-payout"></p>
+        <button id="popup-close-btn" class="btn-primary" style="margin-top:16px; max-width:160px;">Close</button>
+    </div>
+</div>
+
+</body>
 </html>
