@@ -513,6 +513,197 @@ main {
     gap: 16px;
 }
 
+/* ─────────────────────────────────────────────
+   Desktop link bar
+───────────────────────────────────────────── */
+#desktop-link-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #2a2d2e;
+    border: 1px solid #3a3d3e;
+    border-radius: 10px;
+    padding: 8px 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+#link-status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #555;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+#link-status-text {
+    font-family: 'Spectral SC', serif;
+    font-size: 12px;
+    color: #555;
+    flex: 1;
+    min-width: 100px;
+}
+#desktop-link-input {
+    font-family: 'Spectral SC', serif;
+    font-size: 14px;
+    background: #1e2122;
+    color: whitesmoke;
+    border: 1px solid #555;
+    border-radius: 8px;
+    padding: 6px 10px;
+    width: 90px;
+    text-align: center;
+    letter-spacing: 3px;
+    outline: none;
+}
+#desktop-link-input:focus { border-color: #7fd67f; }
+#desktop-link-bar .btn-primary {
+    width: auto;
+    display: inline-block;
+    padding: 7px 16px;
+    font-size: 12px;
+}
+#overlay-download-btn {
+    font-family: 'Spectral SC', serif;
+    font-size: 12px;
+    color: #aaa;
+    background: #1e2122;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 7px 14px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: border-color 0.2s, color 0.2s;
+}
+#overlay-download-btn:hover { border-color: #7fd67f; color: #7fd67f; }
+
+/* ─────────────────────────────────────────────
+   Tab bar
+───────────────────────────────────────────── */
+#tab-bar {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+.tab-btn {
+    font-family: 'Spectral SC', serif;
+    font-size: 14px;
+    padding: 10px 28px;
+    border-radius: 10px;
+    border: 2px solid #444;
+    background: #2a2d2e;
+    color: #aaa;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.tab-btn:hover   { border-color: #777; color: #fff; }
+.tab-btn.tab-active { border-color: #7fd67f; color: #7fd67f; background: #1e2e1e; }
+
+/* ─────────────────────────────────────────────
+   Cheat sheet
+───────────────────────────────────────────── */
+#cs-evidence-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+
+.cs-evi-btn {
+    font-family: 'Spectral SC', serif;
+    padding: 9px 18px;
+    border-radius: 8px;
+    border: 2px solid #444;
+    background: #2a2d2e;
+    color: #ccc;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+}
+.cs-evi-btn:hover         { border-color: #888; color: #fff; }
+.cs-evi-confirmed         { background: #1e2e1e !important; border-color: #7fd67f !important; color: #7fd67f !important; }
+.cs-evi-ruled-out         { background: #2e1e1e !important; border-color: #e06c6c !important; color: #e06c6c !important; text-decoration: line-through; }
+.cs-evi-impossible        { opacity: 0.35; }
+
+#cs-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    justify-content: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+#cs-ghost-count {
+    font-family: 'Spectral SC', serif;
+    font-size: 13px;
+    color: #888;
+}
+#cs-hint {
+    font-family: 'Spectral SC', serif;
+    font-size: 11px;
+    color: #555;
+}
+#cs-reset-btn {
+    font-family: 'Spectral SC', serif;
+    padding: 6px 16px;
+    background: #2e1e1e;
+    border: 1px solid #e06c6c;
+    color: #e06c6c;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+}
+#cs-reset-btn:hover { background: #3d2020; }
+
+#cs-ghost-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+    gap: 10px;
+    padding-bottom: 40px;
+}
+
+.cs-ghost-card {
+    background: #2a2d2e;
+    border: 1px solid #3a3d3e;
+    border-radius: 10px;
+    padding: 10px 12px;
+    transition: opacity 0.2s;
+}
+.cs-ghost-card.cs-ghost-hidden { display: none; }
+.cs-ghost-name {
+    font-family: 'Spectral SC', serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 6px;
+}
+.cs-ghost-evidence {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.cs-evi-tag {
+    font-family: 'Spectral SC', serif;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #333;
+    color: #888;
+    width: fit-content;
+    transition: color 0.15s, background 0.15s;
+}
+.cs-evi-tag.cs-evi-tag-confirmed { color: #7fd67f; background: #1e2e1e; }
+/* Evidence tag accent colours */
+.cs-evi-tag-emf       { border-left: 3px solid #e5a550; }
+.cs-evi-tag-uv        { border-left: 3px solid #b57aff; }
+.cs-evi-tag-freezing  { border-left: 3px solid #7acce5; }
+.cs-evi-tag-dots      { border-left: 3px solid #7fd67f; }
+.cs-evi-tag-orb       { border-left: 3px solid #f0e060; }
+.cs-evi-tag-writing   { border-left: 3px solid #e07060; }
+.cs-evi-tag-spiritbox { border-left: 3px solid #e06cb0; }
+
 /* ── Wheel config panel ── */
 #wheel-config-section {
     background: #2a2d2e;

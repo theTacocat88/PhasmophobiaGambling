@@ -24,17 +24,56 @@ const db   = getFirestore(app);
 const rtdb = getDatabase(app);
 
 // ─── Wheel definitions ────────────────────────────────────────────────────────
-// "deaths" options are built dynamically from player names — options: null means dynamic.
 const WHEEL_DEFS = {
   winlose:      { label: "Win / Lose",    options: ["Win", "Lose", "Partial Win"] },
   ghosttype:    { label: "Ghost Type",    options: ["Banshee","Dayan","Deogen","Demon","Gallu","Goryo","Hantu","Jinn","Mare","Moroi","Myling","Obake","Obambo","Oni","Onryo","Phantom","Poltergeist","Raiju","Revenant","Shade","Spirit","Thaye","The Mimic","The Twins","Wraith","Yokai","Yurei"] },
-  deaths:       { label: "Deaths",        options: null }, // dynamic: player names
+  deaths:       { label: "Deaths",        options: null },
   perfectrun:   { label: "Perfect Run",   options: ["Yes", "No"] },
   ghostspeed:   { label: "Ghost Speed",   options: ["Slow", "Medium", "Fast", "Variable"] },
   cursedobject: { label: "Cursed Object", options: ["Music Box","Ouija Board","Summoning Circle","Voodoo Doll","Monkey's Paw","Tarot Cards","Haunted Mirror","None"] },
 };
-
 const WHEEL_KEYS = ["wheel1", "wheel2", "wheel3"];
+
+// ─── Cheat sheet data ─────────────────────────────────────────────────────────
+const EVIDENCE = [
+  { id: "emf",       label: "EMF 5"       },
+  { id: "uv",        label: "Ultraviolet" },
+  { id: "writing",   label: "Writing"     },
+  { id: "freezing",  label: "Freezing"    },
+  { id: "dots",      label: "D.O.T.S"     },
+  { id: "orb",       label: "Ghost Orb"   },
+  { id: "spiritbox", label: "Spirit Box"  },
+];
+
+const GHOSTS = [
+  { name: "Banshee",     evidence: ["uv","orb","dots"]                },
+  { name: "Dayan",       evidence: ["emf","spiritbox","dots"]         },
+  { name: "Deogen",      evidence: ["spiritbox","writing","dots"]     },
+  { name: "Demon",       evidence: ["uv","freezing","writing"]        },
+  { name: "Gallu",       evidence: ["emf","uv","spiritbox"]           },
+  { name: "Goryo",       evidence: ["emf","uv","dots"]                },
+  { name: "Hantu",       evidence: ["uv","orb","freezing"]            },
+  { name: "Jinn",        evidence: ["emf","uv","freezing"]            },
+  { name: "Mare",        evidence: ["orb","writing","spiritbox"]      },
+  { name: "Moroi",       evidence: ["spiritbox","writing","freezing"] },
+  { name: "Myling",      evidence: ["emf","uv","writing"]             },
+  { name: "Obake",       evidence: ["emf","uv","orb"]                 },
+  { name: "Obambo",      evidence: ["emf","writing","dots"]           },
+  { name: "Oni",         evidence: ["emf","freezing","dots"]          },
+  { name: "Onryo",       evidence: ["orb","freezing","spiritbox"]     },
+  { name: "Phantom",     evidence: ["uv","orb","spiritbox"]           },
+  { name: "Poltergeist", evidence: ["uv","writing","spiritbox"]       },
+  { name: "Raiju",       evidence: ["emf","orb","dots"]               },
+  { name: "Revenant",    evidence: ["orb","writing","freezing"]       },
+  { name: "Shade",       evidence: ["emf","writing","freezing"]       },
+  { name: "Spirit",      evidence: ["emf","writing","spiritbox"]      },
+  { name: "Thaye",       evidence: ["orb","writing","dots"]           },
+  { name: "The Mimic",   evidence: ["uv","freezing","spiritbox"]      },
+  { name: "The Twins",   evidence: ["emf","freezing","spiritbox"]     },
+  { name: "Wraith",      evidence: ["emf","dots","spiritbox"]         },
+  { name: "Yokai",       evidence: ["orb","dots","spiritbox"]         },
+  { name: "Yurei",       evidence: ["orb","freezing","dots"]          },
+];
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let currentUid       = null;
@@ -42,11 +81,17 @@ let currentLobbyCode = null;
 let isAdmin          = false;
 let currencyLabel    = "Points";
 let currentPlayers   = {};
-let activeWheels     = ["winlose", "ghosttype", "deaths"]; // default, overwritten by lobby doc
+let activeWheels     = ["winlose", "ghosttype", "deaths"];
 let unsubLobby       = null;
 let unsubBets        = null;
 let unsubPresence    = null;
 let lastPayoutRound  = -1;
+let activeTab        = "bets"; // "bets" | "cheatsheet"
+
+// Evidence state is driven entirely from Firestore so all clients stay in sync.
+// Local copy used only for rendering — source of truth is the lobby doc.
+let localEvidence    = {}; // { emf: "none"|"confirmed"|"ruled_out", ... }
+EVIDENCE.forEach(e => { localEvidence[e.id] = "none"; });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function $(id) { return document.getElementById(id); }
@@ -61,28 +106,138 @@ function cleanupListeners() {
   if (unsubPresence) { unsubPresence(); unsubPresence = null; }
 }
 
-// Build the options for a pick-select given a wheel type key and current players
 function getWheelOptions(typeKey, players) {
   const def = WHEEL_DEFS[typeKey];
   if (!def) return [];
   if (def.options !== null) return def.options;
-  // Deaths: dynamic
-  const names = Object.values(players);
-  return ["None Dead", ...names, "All Dead"];
+  return ["None Dead", ...Object.values(players), "All Dead"];
+}
+
+// ─── Tab switcher ─────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  activeTab = tab;
+  $("tab-bets").classList.toggle("tab-active", tab === "bets");
+  $("tab-cheatsheet").classList.toggle("tab-active", tab === "cheatsheet");
+  $("panel-bets").classList.toggle("hidden", tab !== "bets");
+  $("panel-cheatsheet").classList.toggle("hidden", tab !== "cheatsheet");
+}
+
+// ─── Cheat sheet rendering ────────────────────────────────────────────────────
+function buildCheatSheet() {
+  // Evidence buttons
+  const evPanel = $("cs-evidence-panel");
+  evPanel.innerHTML = "";
+  EVIDENCE.forEach(ev => {
+    const btn = document.createElement("button");
+    btn.className   = "cs-evi-btn";
+    btn.id          = `cs-evi-${ev.id}`;
+    btn.textContent = ev.label;
+    btn.addEventListener("click", () => cycleEvidence(ev.id));
+    evPanel.appendChild(btn);
+  });
+
+  // Ghost cards
+  const grid = $("cs-ghost-grid");
+  grid.innerHTML = "";
+  GHOSTS.forEach(ghost => {
+    const card = document.createElement("div");
+    card.className = "cs-ghost-card";
+    card.id        = `cs-ghost-${ghost.name.replace(/\s/g, "-")}`;
+
+    const name = document.createElement("p");
+    name.className   = "cs-ghost-name";
+    name.textContent = ghost.name;
+
+    const tags = document.createElement("div");
+    tags.className = "cs-ghost-evidence";
+    ghost.evidence.forEach(eid => {
+      const tag = document.createElement("span");
+      tag.className   = `cs-evi-tag cs-evi-tag-${eid}`;
+      tag.textContent = EVIDENCE.find(e => e.id === eid).label;
+      tags.appendChild(tag);
+    });
+
+    card.appendChild(name);
+    card.appendChild(tags);
+    grid.appendChild(card);
+  });
+}
+
+// Called whenever localEvidence changes (from Firestore or local click)
+function renderCheatSheet() {
+  const confirmed = Object.entries(localEvidence).filter(([,v]) => v === "confirmed").map(([k]) => k);
+  const ruledOut  = Object.entries(localEvidence).filter(([,v]) => v === "ruled_out").map(([k]) => k);
+
+  // Determine which evidence IDs are impossible given confirmed evidence
+  // (any evidence not shared by ALL still-possible ghosts)
+  const possibleGhosts = GHOSTS.filter(g => {
+    return confirmed.every(e => g.evidence.includes(e))
+        && ruledOut.every(e => !g.evidence.includes(e));
+  });
+  const possibleEvidenceIds = new Set(possibleGhosts.flatMap(g => g.evidence));
+
+  // Update evidence button states
+  EVIDENCE.forEach(ev => {
+    const btn = $(`cs-evi-${ev.id}`);
+    if (!btn) return;
+    btn.classList.remove("cs-evi-confirmed", "cs-evi-ruled-out", "cs-evi-impossible");
+    if (localEvidence[ev.id] === "confirmed")  btn.classList.add("cs-evi-confirmed");
+    else if (localEvidence[ev.id] === "ruled_out") btn.classList.add("cs-evi-ruled-out");
+    else if (!possibleEvidenceIds.has(ev.id) && possibleGhosts.length > 0)
+      btn.classList.add("cs-evi-impossible");
+  });
+
+  // Show/hide ghost cards
+  let visible = 0;
+  GHOSTS.forEach(ghost => {
+    const card = $(`cs-ghost-${ghost.name.replace(/\s/g, "-")}`);
+    if (!card) return;
+    const show = possibleGhosts.includes(ghost);
+    card.classList.toggle("cs-ghost-hidden", !show);
+    // Highlight evidence tags that are confirmed
+    card.querySelectorAll(".cs-evi-tag").forEach(tag => {
+      const eid = [...tag.classList].find(c => c.startsWith("cs-evi-tag-"))?.replace("cs-evi-tag-","");
+      tag.classList.toggle("cs-evi-tag-confirmed", eid && localEvidence[eid] === "confirmed");
+    });
+    if (show) visible++;
+  });
+
+  const counter = $("cs-ghost-count");
+  if (counter) counter.textContent = `${visible} ghost${visible !== 1 ? "s" : ""} remaining`;
+}
+
+// Cycle evidence state and push to Firestore
+async function cycleEvidence(id) {
+  if (!currentLobbyCode) return;
+  const cur = localEvidence[id];
+  const next = cur === "none" ? "confirmed" : cur === "confirmed" ? "ruled_out" : "none";
+  localEvidence[id] = next;
+  renderCheatSheet();
+  try {
+    await updateDoc(doc(db, "lobbies", currentLobbyCode), {
+      [`evidence.${id}`]: next
+    });
+  } catch(e) { console.error("cycleEvidence:", e); }
+}
+
+async function resetCheatSheet() {
+  if (!currentLobbyCode) return;
+  const reset = {};
+  EVIDENCE.forEach(e => { reset[`evidence.${e.id}`] = "none"; });
+  EVIDENCE.forEach(e => { localEvidence[e.id] = "none"; });
+  renderCheatSheet();
+  try {
+    await updateDoc(doc(db, "lobbies", currentLobbyCode), reset);
+  } catch(e) { console.error("resetCheatSheet:", e); }
 }
 
 // ─── Render betting cards ─────────────────────────────────────────────────────
-// Called whenever activeWheels or currentPlayers changes.
-// Rebuilds #main (the three wheel cards) dynamically.
 function renderBettingCards() {
   const main = $("main");
   main.innerHTML = "";
-
   activeWheels.forEach((typeKey, i) => {
-    const slotKey = WHEEL_KEYS[i]; // "wheel1", "wheel2", "wheel3"
     const def     = WHEEL_DEFS[typeKey] || { label: "Unknown", options: [] };
     const options = getWheelOptions(typeKey, currentPlayers);
-
     const card = document.createElement("div");
     card.className = "wheel-card";
     card.innerHTML = `
@@ -95,32 +250,27 @@ function renderBettingCards() {
     `;
     main.appendChild(card);
   });
-
-  // Fill unused wheel slots with empty placeholders so IDs always exist
   for (let i = activeWheels.length; i < 3; i++) {
     const card = document.createElement("div");
     card.className = "wheel-card wheel-card-empty";
     card.innerHTML = `<p class="wheel-label" style="color:#555;">— Not used —</p>`;
-    main.appendChild(card);
-    // Create hidden dummy inputs so bet logic doesn't crash on getElementById
     const dummy = document.createElement("input");
     dummy.type = "hidden"; dummy.id = `bet-${i+1}`; dummy.value = "0";
     card.appendChild(dummy);
     const dummyPick = document.createElement("input");
     dummyPick.type = "hidden"; dummyPick.id = `pick-${i+1}`; dummyPick.value = "";
     card.appendChild(dummyPick);
+    main.appendChild(card);
   }
 }
 
-// ─── Render outcome selectors (admin results phase) ───────────────────────────
+// ─── Render outcome selectors ─────────────────────────────────────────────────
 function renderOutcomeSelectors() {
   const container = $("outcome-selectors");
   container.innerHTML = "";
-
   activeWheels.forEach((typeKey, i) => {
     const def     = WHEEL_DEFS[typeKey] || { label: "Unknown", options: [] };
     const options = getWheelOptions(typeKey, currentPlayers);
-
     const row = document.createElement("div");
     row.className = "outcome-row";
     row.innerHTML = `
@@ -132,51 +282,40 @@ function renderOutcomeSelectors() {
     `;
     container.appendChild(row);
   });
-
-  // Dummy hidden selects for unused wheels so payout logic doesn't crash
   for (let i = activeWheels.length; i < 3; i++) {
     const dummy = document.createElement("select");
-    dummy.id    = `outcome-${i+1}`;
+    dummy.id = `outcome-${i+1}`;
     dummy.style.display = "none";
-    // Give it a non-empty value so the "select all three" check passes for unused slots
     dummy.innerHTML = `<option value="N/A" selected>N/A</option>`;
     container.appendChild(dummy);
   }
 }
 
-// ─── Render wheel config panel (admin only) ───────────────────────────────────
+// ─── Render wheel config panel ────────────────────────────────────────────────
 function renderWheelConfig() {
   const panel = $("wheel-config-panel");
   if (!panel) return;
   panel.innerHTML = "";
-
   for (let i = 0; i < 3; i++) {
     const row = document.createElement("div");
     row.className = "wheel-config-row";
-
     const label = document.createElement("span");
     label.textContent = `Wheel ${i+1}`;
     label.className = "wheel-config-label";
     row.appendChild(label);
-
     const sel = document.createElement("select");
-    sel.id        = `wheel-type-${i+1}`;
+    sel.id = `wheel-type-${i+1}`;
     sel.className = "wheel-type-select";
-
-    // First option: "— None —" (only for wheels 2 and 3)
     if (i > 0) {
       const none = document.createElement("option");
       none.value = ""; none.textContent = "— None —";
       sel.appendChild(none);
     }
-
     Object.entries(WHEEL_DEFS).forEach(([key, def]) => {
       const opt = document.createElement("option");
-      opt.value       = key;
-      opt.textContent = def.label;
+      opt.value = key; opt.textContent = def.label;
       sel.appendChild(opt);
     });
-
     sel.value = activeWheels[i] || "";
     sel.addEventListener("change", onWheelConfigChange);
     row.appendChild(sel);
@@ -186,38 +325,26 @@ function renderWheelConfig() {
 
 async function onWheelConfigChange() {
   if (!isAdmin || !currentLobbyCode) return;
-
   const w1 = $("wheel-type-1").value;
-  const w2 = $("wheel-type-2") ? $("wheel-type-2").value : "";
-  const w3 = $("wheel-type-3") ? $("wheel-type-3").value : "";
-
-  if (!w1) {
-    // Wheel 1 must always be set
-    $("wheel-type-1").value = activeWheels[0] || Object.keys(WHEEL_DEFS)[0];
-    return;
-  }
-
+  const w2 = $("wheel-type-2")?.value || "";
+  const w3 = $("wheel-type-3")?.value || "";
+  if (!w1) { $("wheel-type-1").value = activeWheels[0] || Object.keys(WHEEL_DEFS)[0]; return; }
   const wheels = [w1, w2, w3].filter(Boolean);
-
-  // Check for duplicates
   if (new Set(wheels).size !== wheels.length) {
     $("wheel-config-error").textContent = "Each wheel must be a different type.";
-    // Revert UI to current activeWheels
     renderWheelConfig();
     return;
   }
   $("wheel-config-error").textContent = "";
-
-  try {
-    await updateDoc(doc(db, "lobbies", currentLobbyCode), { wheels });
-  } catch(e) { console.error("wheel config save:", e); }
+  try { await updateDoc(doc(db, "lobbies", currentLobbyCode), { wheels }); }
+  catch(e) { console.error("wheel config save:", e); }
 }
 
 // ─── Reset betting UI ─────────────────────────────────────────────────────────
 function resetBettingUI() {
   for (let i = 1; i <= 3; i++) {
-    const b = $(`bet-${i}`);   if (b) b.value = "";
-    const p = $(`pick-${i}`);  if (p) p.value = "";
+    const b = $(`bet-${i}`);  if (b) b.value = "";
+    const p = $(`pick-${i}`); if (p) p.value = "";
   }
   const err = $("bet-error"); if (err) err.textContent = "";
   document.querySelectorAll(".wheel").forEach(el => { el.innerHTML = ""; });
@@ -277,13 +404,14 @@ $("create-lobby-btn").addEventListener("click", async () => {
       if (!(await getDoc(doc(db,"lobbies",c))).exists()) { code = c; break; }
     }
     if (!code) { err.textContent = "Could not generate a code."; return; }
-
-    const defaultWheels = ["winlose", "ghosttype", "deaths"];
+    const defaultEvidence = {};
+    EVIDENCE.forEach(e => { defaultEvidence[e.id] = "none"; });
     await setDoc(doc(db,"lobbies",code), {
       adminUid: currentUid, round: 1, phase: "betting",
       results: null, payouts: null,
       players: { [currentUid]: name },
-      wheels:  defaultWheels,
+      wheels:  ["winlose", "ghosttype", "deaths"],
+      evidence: defaultEvidence,
     });
     const uSnap = await getDoc(doc(db,"users",currentUid));
     if (uSnap.exists() && !uSnap.data().username) {
@@ -317,13 +445,16 @@ $("join-lobby-btn").addEventListener("click", async () => {
 
 $("leave-lobby-btn").addEventListener("click", () => doLeave(false));
 
+$("tab-bets").addEventListener("click", () => switchTab("bets"));
+$("tab-cheatsheet").addEventListener("click", () => switchTab("cheatsheet"));
+$("cs-reset-btn").addEventListener("click", () => resetCheatSheet());
+
 $("place-bets-btn").addEventListener("click", async () => {
   const errEl = $("bet-error");
   errEl.textContent = "";
   try {
     if (!currentUid)       { errEl.textContent = "Not signed in yet."; return; }
     if (!currentLobbyCode) { errEl.textContent = "Not in a lobby."; return; }
-
     const amounts = [];
     const picks   = [];
     for (let i = 1; i <= 3; i++) {
@@ -331,17 +462,13 @@ $("place-bets-btn").addEventListener("click", async () => {
       picks.push($(`pick-${i}`).value);
     }
     const total = amounts.reduce((a,b) => a+b, 0);
-
     if (total === 0) { errEl.textContent = "Enter at least one bet amount."; return; }
-
-    // Only validate wheels that are actually active
     for (let i = 0; i < activeWheels.length; i++) {
       if (amounts[i] > 0 && !picks[i]) {
         errEl.textContent = `Choose a pick for "${WHEEL_DEFS[activeWheels[i]].label}", or set its bet to 0.`;
         return;
       }
     }
-
     const userSnap = await getDoc(doc(db,"users",currentUid));
     if (!userSnap.exists()) { errEl.textContent = "User account not found."; return; }
     const pts = userSnap.data().points ?? 0;
@@ -349,27 +476,36 @@ $("place-bets-btn").addEventListener("click", async () => {
       errEl.textContent = `Not enough ${currencyLabel}. You have ${pts}, bet is ${total}.`;
       return;
     }
-
     await updateDoc(doc(db,"users",currentUid), { points: pts - total });
     setPointsDisplay(pts - total);
-
     await setDoc(doc(db,"lobbies",currentLobbyCode,"bets",currentUid), {
       wheel1: { pick: picks[0], amount: amounts[0] },
       wheel2: { pick: picks[1], amount: amounts[1] },
       wheel3: { pick: picks[2], amount: amounts[2] },
     });
-
     const msg = $("bets-placed-msg");
     if (msg) { msg.classList.remove("hidden"); setTimeout(() => msg.classList.add("hidden"), 2500); }
-
   } catch(e) { errEl.textContent = "Error: "+e.message; console.error("placeBets:", e); }
 });
 
 $("spin-btn").addEventListener("click", async () => {
   try {
     if (!isAdmin || !currentLobbyCode) return;
-    await updateDoc(doc(db,"lobbies",currentLobbyCode), { phase: "results" });
+    // Reset evidence when round starts
+    const resetEvidence = {};
+    EVIDENCE.forEach(e => { resetEvidence[`evidence.${e.id}`] = "none"; });
+    await updateDoc(doc(db,"lobbies",currentLobbyCode), {
+      phase: "playing",
+      ...resetEvidence,
+    });
   } catch(e) { console.error("fixBets:", e); alert("Error: "+e.message); }
+});
+
+$("end-round-btn").addEventListener("click", async () => {
+  try {
+    if (!isAdmin || !currentLobbyCode) return;
+    await updateDoc(doc(db,"lobbies",currentLobbyCode), { phase: "results" });
+  } catch(e) { console.error("endRound:", e); alert("Error: "+e.message); }
 });
 
 $("payout-btn").addEventListener("click", async () => {
@@ -377,42 +513,29 @@ $("payout-btn").addEventListener("click", async () => {
   errEl.textContent = "";
   try {
     if (!isAdmin || !currentLobbyCode) return;
-
     const outcomes = [];
     for (let i = 1; i <= 3; i++) {
       outcomes.push($(`outcome-${i}`) ? $(`outcome-${i}`).value : "N/A");
     }
-
-    // Only require outcomes for active wheels
     for (let i = 0; i < activeWheels.length; i++) {
       if (!outcomes[i]) {
         errEl.textContent = `Select an outcome for "${WHEEL_DEFS[activeWheels[i]].label}".`;
         return;
       }
     }
-
     const results  = { wheel1: outcomes[0], wheel2: outcomes[1], wheel3: outcomes[2] };
     const betsSnap = await getDocs(collection(db,"lobbies",currentLobbyCode,"bets"));
     const payoutRecord = calculatePayouts(betsSnap, results);
-
     const batch = writeBatch(db);
     betsSnap.forEach(b => batch.delete(b.ref));
     await batch.commit();
-
     const lobbySnap = await getDoc(doc(db,"lobbies",currentLobbyCode));
     if (!lobbySnap.exists()) return;
-
     await updateDoc(doc(db,"lobbies",currentLobbyCode), {
-      phase: "payout_done",
-      results,
-      payouts: payoutRecord,
-      round:   lobbySnap.data().round,
+      phase: "payout_done", results, payouts: payoutRecord,
+      round: lobbySnap.data().round,
     });
-
-    for (let i = 1; i <= 3; i++) {
-      const el = $(`outcome-${i}`); if (el) el.value = "";
-    }
-
+    for (let i = 1; i <= 3; i++) { const el = $(`outcome-${i}`); if (el) el.value = ""; }
   } catch(e) { errEl.textContent = "Error: "+e.message; console.error("payout:", e); }
 });
 
@@ -503,6 +626,9 @@ function enterLobby(code) {
   $("screen-lobby").classList.remove("hidden");
   $("lobby-code-display").textContent = `Lobby: ${code}`;
 
+  // Build cheat sheet DOM once (structure doesn't change)
+  buildCheatSheet();
+
   setupPresence(code);
 
   if (unsubLobby) unsubLobby();
@@ -568,16 +694,17 @@ function handleLobbyUpdate(data) {
   $("lobby-round-display").textContent = `Round ${data.round}`;
   isAdmin = data.adminUid === currentUid;
 
-  $("spin-btn").style.display       = isAdmin ? "inline-block" : "none";
-  $("place-bets-btn").style.display = "inline-block";
-
-  // Update wheel config from lobby doc
-  const newWheels = data.wheels || ["winlose", "ghosttype", "deaths"];
-  const wheelsChanged = JSON.stringify(newWheels) !== JSON.stringify(activeWheels);
-  activeWheels = newWheels;
-
-  currentPlayers = data.players || {};
+  activeWheels   = data.wheels   || ["winlose", "ghosttype", "deaths"];
+  currentPlayers = data.players  || {};
   if (currentLobbyCode && !currentPlayers[currentUid]) { doLeave(true); return; }
+
+  // Sync evidence from Firestore into local state and re-render cheat sheet
+  if (data.evidence) {
+    EVIDENCE.forEach(e => {
+      localEvidence[e.id] = data.evidence[e.id] || "none";
+    });
+    renderCheatSheet();
+  }
 
   // Player list
   const list = $("players-list");
@@ -600,21 +727,41 @@ function handleLobbyUpdate(data) {
     list.appendChild(tag);
   }
 
-  if (data.phase === "betting") {
-    $("phase-betting").classList.remove("hidden");
-    $("phase-results").classList.add("hidden");
+  // ── Phase routing ──────────────────────────────────────────────────────────
+  const phaseBetting  = $("phase-betting");
+  const phasePlaying  = $("phase-playing");
+  const phaseResults  = $("phase-results");
 
-    // Show/hide wheel config panel (admin only, betting phase only)
+  // Hide all phases first
+  phaseBetting.classList.add("hidden");
+  phasePlaying.classList.add("hidden");
+  phaseResults.classList.add("hidden");
+
+  if (data.phase === "betting") {
+    phaseBetting.classList.remove("hidden");
+    // Tabs: only bets tab visible/active during betting
+    $("tab-bar").classList.add("hidden");
+    switchTab("bets");
+
     const cfgSection = $("wheel-config-section");
     if (cfgSection) cfgSection.classList.toggle("hidden", !isAdmin);
-
-    // Rebuild betting cards whenever wheels or players change
     renderBettingCards();
     if (isAdmin) renderWheelConfig();
 
+    $("spin-btn").style.display       = isAdmin ? "inline-block" : "none";
+    $("place-bets-btn").style.display = "inline-block";
+
+  } else if (data.phase === "playing") {
+    phasePlaying.classList.remove("hidden");
+    // Show tab bar, default to cheat sheet
+    $("tab-bar").classList.remove("hidden");
+    if (activeTab === "bets") switchTab("cheatsheet"); // auto-switch on first enter
+    // Admin gets End Round button
+    $("end-round-btn").style.display = isAdmin ? "inline-block" : "none";
+
   } else if (data.phase === "results") {
-    $("phase-betting").classList.add("hidden");
-    $("phase-results").classList.remove("hidden");
+    phaseResults.classList.remove("hidden");
+    $("tab-bar").classList.add("hidden");
     if (isAdmin) {
       $("tbd-msg").classList.add("hidden");
       $("admin-outcome-section").classList.remove("hidden");
@@ -665,22 +812,17 @@ function renderMyBets(bets) {
   const mb = $("my-bets-display");
   if (!mb) return;
   if (!bets) { mb.innerHTML = `<p class="my-bets-empty">No bets placed yet.</p>`; return; }
-
   const rows = WHEEL_KEYS.map((k, i) => {
-    const b       = bets[k];
-    const typeKey = activeWheels[i];
+    const b = bets[k]; const typeKey = activeWheels[i];
     if (!b || b.amount === 0 || !typeKey) return null;
     const label = WHEEL_DEFS[typeKey]?.label || `Wheel ${i+1}`;
     return `<div class="my-bet-row">
       <span class="my-bet-label">${label}</span>
-      <span class="my-bet-pick">${b.pick || "—"}</span>
+      <span class="my-bet-pick">${b.pick||"—"}</span>
       <span class="my-bet-amount">${b.amount} ${currencyLabel}</span>
     </div>`;
   }).filter(Boolean);
-
-  mb.innerHTML = rows.length
-    ? rows.join("")
-    : `<p class="my-bets-empty">No bets placed yet.</p>`;
+  mb.innerHTML = rows.length ? rows.join("") : `<p class="my-bets-empty">No bets placed yet.</p>`;
 }
 
 // ─── Payout math ──────────────────────────────────────────────────────────────
@@ -688,26 +830,20 @@ function calculatePayouts(betsSnap, results) {
   let totalPool = 0;
   const allBets = {};
   betsSnap.forEach(b => {
-    const d = b.data();
-    allBets[b.id] = d;
-
+    const d = b.data(); allBets[b.id] = d;
     totalPool += (d.wheel1?.amount||0) + (d.wheel2?.amount||0) + (d.wheel3?.amount||0);
   });
-
   const winStakes = {}; let totalWin = 0;
   for (const [uid, bets] of Object.entries(allBets)) {
     let stake = 0;
     WHEEL_KEYS.forEach((k, i) => {
       const b = bets[k];
-      // Only score wheels that were active this round
       if (i >= activeWheels.length) return;
       if (b && b.amount > 0 && b.pick && b.pick === results[k]) stake += b.amount;
     });
     if (stake > 0) { winStakes[uid] = stake; totalWin += stake; }
   }
-
   if (totalWin === 0) return {};
-
   const losingPool = totalPool - totalWin;
   const payouts = {};
   for (const [uid, stake] of Object.entries(winStakes)) {
@@ -715,6 +851,99 @@ function calculatePayouts(betsSnap, results) {
   }
   return payouts;
 }
+
+// ─── Desktop Link (WebSocket client) ────────────────────────────────────────
+// Connects to the Electron overlay app via a 4-digit code.
+// When connected, evidence changes on the webpage are pushed to the overlay,
+// and evidence changes from hotkeys on the overlay are pushed to the webpage.
+let desktopWS       = null;
+let desktopConnected = false;
+
+function connectDesktopLink(code) {
+  if (desktopWS) { desktopWS.close(); desktopWS = null; }
+  try {
+    desktopWS = new WebSocket('ws://localhost:37421');
+  } catch(e) {
+    setLinkStatus('error');
+    return;
+  }
+
+  desktopWS.addEventListener('open', () => {
+    desktopWS.send(JSON.stringify({ type: 'auth', code }));
+  });
+
+  desktopWS.addEventListener('message', (ev) => {
+    try {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === 'connected') {
+        desktopConnected = true;
+        setLinkStatus('connected');
+        // Sync current lobby evidence state to overlay
+        if (msg.state) {
+          Object.entries(msg.state).forEach(([id, st]) => {
+            localEvidence[id] = st;
+          });
+          renderCheatSheet();
+        }
+      } else if (msg.type === 'evidence-update') {
+        // Hotkey pressed on overlay — update local state and push to Firestore
+        localEvidence[msg.id] = msg.state;
+        renderCheatSheet();
+        if (currentLobbyCode) {
+          updateDoc(doc(db, 'lobbies', currentLobbyCode), {
+            [`evidence.${msg.id}`]: msg.state
+          }).catch(e => console.error('evidence sync from overlay:', e));
+        }
+      } else if (msg.type === 'evidence-reset') {
+        EVIDENCE.forEach(e => { localEvidence[e.id] = 'none'; });
+        renderCheatSheet();
+        if (currentLobbyCode) {
+          const reset = {};
+          EVIDENCE.forEach(e => { reset[`evidence.${e.id}`] = 'none'; });
+          updateDoc(doc(db, 'lobbies', currentLobbyCode), reset)
+            .catch(e => console.error('evidence reset sync:', e));
+        }
+      }
+    } catch(_) {}
+  });
+
+  desktopWS.addEventListener('close', () => {
+    desktopConnected = false;
+    desktopWS = null;
+    setLinkStatus('disconnected');
+  });
+
+  desktopWS.addEventListener('error', () => {
+    setLinkStatus('error');
+  });
+}
+
+function setLinkStatus(status) {
+  const el = $('link-status-text');
+  const dot = $('link-status-dot');
+  if (!el || !dot) return;
+  const map = {
+    idle:         { text: 'Not connected', color: '#555' },
+    connected:    { text: 'Overlay linked ✓', color: '#7fd67f' },
+    disconnected: { text: 'Disconnected', color: '#e06c6c' },
+    error:        { text: 'Could not connect', color: '#e06c6c' },
+  };
+  const s = map[status] || map.idle;
+  el.textContent  = s.text;
+  el.style.color  = s.color;
+  dot.style.background = s.color;
+}
+
+// Wire the link UI (code input + connect button in the lobby header)
+$('desktop-link-btn').addEventListener('click', () => {
+  const code = $('desktop-link-input').value.trim();
+  if (!code || code.length !== 4) {
+    setLinkStatus('error');
+    return;
+  }
+  setLinkStatus('idle');
+  connectDesktopLink(code);
+});
 
 // ─── Payout popup ─────────────────────────────────────────────────────────────
 function showPayoutPopup(data) {
@@ -724,12 +953,11 @@ function showPayoutPopup(data) {
   const wheels  = data.wheels  || activeWheels;
 
   $("popup-results-display").innerHTML = WHEEL_KEYS.map((k, i) => {
-    const typeKey = wheels[i];
-    if (!typeKey) return "";
+    const typeKey = wheels[i]; if (!typeKey) return "";
     const label = WHEEL_DEFS[typeKey]?.label || `Wheel ${i+1}`;
     return `<div class="popup-result-row">
       <span class="popup-result-label">${label}</span>
-      <span class="popup-result-value">${results[k] || "—"}</span>
+      <span class="popup-result-value">${results[k]||"—"}</span>
     </div>`;
   }).join("");
 
@@ -738,7 +966,7 @@ function showPayoutPopup(data) {
       ? `<p style="color:#aaa;text-align:center;">No winners this round.</p>`
       : Object.entries(payouts).map(([uid,amt]) =>
           `<div class="popup-payout-row">
-            <span>${players[uid] || "Player"}</span>
+            <span>${players[uid]||"Player"}</span>
             <span class="payout-amount">+${amt} ${currencyLabel}</span>
           </div>`
         ).join("");
@@ -747,6 +975,5 @@ function showPayoutPopup(data) {
   const msg   = $("popup-your-payout");
   msg.textContent = myAmt > 0 ? `You won ${myAmt} ${currencyLabel}!` : "Better luck next round.";
   msg.style.color = myAmt > 0 ? "#7fd67f" : "#aaa";
-
   $("payout-popup").classList.remove("hidden");
 }

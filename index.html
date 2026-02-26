@@ -40,7 +40,6 @@
             <div id="landing-card">
                 <p class="section-label">Your Name</p>
                 <input type="text" id="display-name-input" placeholder="e.g. tacocat" maxlength="20" />
-
                 <div id="landing-actions">
                     <div class="landing-half">
                         <p class="section-label">Create Lobby</p>
@@ -74,16 +73,29 @@
                 <button id="leave-lobby-btn" class="btn-danger-sm">Leave</button>
             </div>
 
+            <!-- Desktop Link bar -->
+            <div id="desktop-link-bar">
+                <span id="link-status-dot"></span>
+                <span id="link-status-text">Not connected</span>
+                <input id="desktop-link-input" type="text" maxlength="4" placeholder="Link code..." />
+                <button id="desktop-link-btn" class="btn-primary">Connect Overlay</button>
+                <a id="overlay-download-btn" href="https://phasmophobiagambling.pages.dev/PhasOverlay-Setup.exe" download>⬇ Download Overlay</a>
+            </div>
+
             <!-- Players -->
             <div id="players-section">
                 <p class="section-label">Players</p>
                 <div id="players-list"></div>
             </div>
 
-            <!-- ── Betting phase ── -->
-            <div id="phase-betting">
+            <!-- Tab bar (shown during playing phase) -->
+            <div id="tab-bar" class="hidden">
+                <button id="tab-bets" class="tab-btn">💰 Bets</button>
+                <button id="tab-cheatsheet" class="tab-btn tab-active">👻 Cheat Sheet</button>
+            </div>
 
-                <!-- Wheel type config — admin only, hidden for non-admins -->
+            <!-- ══════════════ BETTING PHASE ══════════════ -->
+            <div id="phase-betting" class="hidden">
                 <div id="wheel-config-section" class="hidden">
                     <p class="section-label" style="text-align:center; margin-bottom:8px;">Configure Wheels</p>
                     <p style="text-align:center; color:#888; font-size:0.82em; margin-bottom:12px;">
@@ -93,10 +105,8 @@
                     <p id="wheel-config-error" style="color:#e06c6c; text-align:center; margin-top:6px; font-size:0.85em;"></p>
                 </div>
 
-                <!-- Wheel betting cards — rebuilt dynamically by JS -->
                 <main id="main"></main>
 
-                <!-- Your current bets summary -->
                 <div id="my-bets-section">
                     <p class="section-label">Your Bets</p>
                     <div id="my-bets-display">
@@ -104,7 +114,6 @@
                     </div>
                 </div>
 
-                <!-- Bet actions -->
                 <div id="btn">
                     <p id="bet-error"></p>
                     <button class="spin" id="place-bets-btn">Place Bets</button>
@@ -113,19 +122,49 @@
                 </div>
             </div>
 
-            <!-- ── Results phase ── -->
+            <!-- ══════════════ PLAYING PHASE ══════════════ -->
+            <div id="phase-playing" class="hidden">
+
+                <!-- Admin only: end round button -->
+                <div style="text-align:center; margin-bottom:16px;">
+                    <button id="end-round-btn" class="spin" style="display:none;">End Round</button>
+                </div>
+
+                <!-- Tab panels -->
+                <div id="panel-bets" class="hidden">
+                    <div id="my-bets-section-playing">
+                        <p class="section-label" style="text-align:center; margin-bottom:10px;">Your Bets This Round</p>
+                        <div id="my-bets-display"></div>
+                    </div>
+                </div>
+
+                <div id="panel-cheatsheet">
+
+                    <!-- Evidence buttons -->
+                    <div id="cs-evidence-panel"></div>
+
+                    <!-- Controls -->
+                    <div id="cs-controls">
+                        <span id="cs-ghost-count"></span>
+                        <button id="cs-reset-btn">Reset</button>
+                        <span id="cs-hint">Click once to confirm · again to rule out · again to clear</span>
+                    </div>
+
+                    <!-- Ghost grid -->
+                    <div id="cs-ghost-grid"></div>
+
+                </div>
+            </div>
+
+            <!-- ══════════════ RESULTS PHASE ══════════════ -->
             <div id="phase-results" class="hidden">
                 <p class="section-label" style="text-align:center; margin-top:30px;">Results</p>
-
                 <p id="tbd-msg" class="hidden" style="text-align:center; color:#aaa; margin:16px 0;">
                     Waiting for admin to confirm results...
                 </p>
-
                 <div id="admin-outcome-section" class="hidden">
                     <p class="section-label" style="text-align:center; margin-bottom:12px;">What actually happened?</p>
-                    <!-- Outcome selectors rebuilt dynamically by JS -->
                     <div id="outcome-selectors"></div>
-
                     <div id="payout-action">
                         <p id="payout-error"></p>
                         <button id="payout-btn" class="btn-primary">Confirm &amp; Payout</button>
