@@ -11,9 +11,6 @@ const firebaseConfig = {
 };
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),rtdb=getDatabase(app);
 
-// ── House bonus multiplier ─────────────────────────────────────────────────────
-// Winners always receive at least their stake back. The house bonus ensures
-// even solo winners profit: extra = stake * HOUSE_BONUS (0.2 = 20% bonus).
 const HOUSE_BONUS = 0.2;
 
 const WHEEL_DEFS={
@@ -26,8 +23,6 @@ const WHEEL_DEFS={
 };
 const WHEEL_KEYS=["wheel1","wheel2","wheel3"];
 
-// The Mimic has a 4th fake evidence: Ghost Orbs (not counted for filtering,
-// but shown as a note on the card). This is baked into the display layer.
 const EVIDENCE=[
   {id:"emf",label:"EMF 5"},
   {id:"uv",label:"Ultraviolet"},
@@ -60,7 +55,6 @@ const GHOSTS=[
   {name:"Shade",evidence:["emf","writing","freezing"]},
   {name:"Spirit",evidence:["emf","writing","spiritbox"]},
   {name:"Thaye",evidence:["orb","writing","dots"]},
-  // The Mimic: real evidence is uv/freezing/spiritbox but it ALSO mimics Ghost Orb
   {name:"The Mimic",evidence:["uv","freezing","spiritbox"],mimicExtra:["orb"]},
   {name:"The Twins",evidence:["emf","freezing","spiritbox"]},
   {name:"Wraith",evidence:["emf","dots","spiritbox"]},
@@ -72,15 +66,10 @@ const GHOSTS=[
 let currentUid=null,currentLobbyCode=null,isAdmin=false,currencyLabel="Points",currentPlayers={};
 let activeWheels=["winlose","ghosttype","deaths"],unsubLobby=null,unsubBets=null,unsubPresence=null;
 let lastPayoutRound=-1;
-// localEvidence: per-evidence state for cheat sheet
 let localEvidence={};
 EVIDENCE.forEach(e=>{localEvidence[e.id]="none";});
-// ghostVotes: shared across players, synced from Firestore
-// { "ghostName": "confirmed" | "ruledout" | "guess" | "none" }
 let ghostVotes={};
-// localDeaths: per-player personal skull marks (not synced)
 let localDeaths={};
-// myDeath: whether I have pressed the "I died" topbar button
 let myDied=false;
 
 const $=id=>document.getElementById(id);
@@ -111,53 +100,16 @@ function buildCheatSheet(){
     card.className="cs-ghost-card";
     card.id=`cs-ghost-${ghost.name.replace(/[\s']/g,"-")}`;
 
-    // Top row: name + action buttons
-    const top=document.createElement("div");top.className="cs-ghost-top";
+    // Card inner: left side (name + evidence) + right side (actions column)
+    const inner=document.createElement("div");inner.className="cs-ghost-inner";
+
+    // Left: name + evidence tags
+    const left=document.createElement("div");left.className="cs-ghost-left";
 
     const name=document.createElement("p");name.className="cs-ghost-name";name.textContent=ghost.name;
-    top.appendChild(name);
+    left.appendChild(name);
 
-    const actions=document.createElement("div");actions.className="cs-ghost-actions";
-
-    // Confirm button (checkmark) — shared
-    const btnConfirm=document.createElement("button");
-    btnConfirm.className="cs-ghost-action-btn ghost-action-confirm";
-    btnConfirm.title="Confirm — this is the ghost";
-    btnConfirm.textContent="\u2713";
-    btnConfirm.addEventListener("click",()=>toggleGhostVote(ghost.name,"confirmed"));
-    actions.appendChild(btnConfirm);
-
-    // Rule out (X) — shared
-    const btnRuledOut=document.createElement("button");
-    btnRuledOut.className="cs-ghost-action-btn ghost-action-ruledout";
-    btnRuledOut.title="Rule out — not this ghost";
-    btnRuledOut.textContent="\u2715";
-    btnRuledOut.addEventListener("click",()=>toggleGhostVote(ghost.name,"ruledout"));
-    actions.appendChild(btnRuledOut);
-
-    // Guess (?) — shared
-    const btnGuess=document.createElement("button");
-    btnGuess.className="cs-ghost-action-btn ghost-action-guess";
-    btnGuess.title="Guess — probably this ghost";
-    btnGuess.textContent="?";
-    btnGuess.addEventListener("click",()=>toggleGhostVote(ghost.name,"guess"));
-    actions.appendChild(btnGuess);
-
-    // Skull — personal only (died to this ghost)
-    const btnSkull=document.createElement("button");
-    btnSkull.className="cs-ghost-action-btn ghost-action-skull";
-    btnSkull.title="I died to this ghost (personal)";
-    btnSkull.textContent="\uD83D\uDC80";
-    btnSkull.addEventListener("click",()=>toggleLocalDeath(ghost.name));
-    actions.appendChild(btnSkull);
-
-    top.appendChild(actions);
-    card.appendChild(top);
-
-    // Evidence tags
     const tags=document.createElement("div");tags.className="cs-ghost-evidence";
-    const allDisplayEvidence=[...ghost.evidence];
-    // The Mimic shows Ghost Orb as a mimic evidence (dimmed/italic)
     ghost.evidence.forEach(eid=>{
       const tag=document.createElement("span");
       tag.className=`cs-evi-tag cs-evi-tag-${eid}`;
@@ -165,7 +117,6 @@ function buildCheatSheet(){
       tag.textContent=EVIDENCE.find(e=>e.id===eid).label;
       tags.appendChild(tag);
     });
-    // Ghost Orb mimic extra
     if(ghost.mimicExtra){
       ghost.mimicExtra.forEach(eid=>{
         const tag=document.createElement("span");
@@ -178,7 +129,42 @@ function buildCheatSheet(){
         tags.appendChild(tag);
       });
     }
-    card.appendChild(tags);
+    left.appendChild(tags);
+    inner.appendChild(left);
+
+    // Right: action buttons vertical column
+    const actions=document.createElement("div");actions.className="cs-ghost-actions";
+
+    const btnConfirm=document.createElement("button");
+    btnConfirm.className="cs-ghost-action-btn ghost-action-confirm";
+    btnConfirm.title="Confirm — this is the ghost";
+    btnConfirm.textContent="\u2713";
+    btnConfirm.addEventListener("click",()=>toggleGhostVote(ghost.name,"confirmed"));
+    actions.appendChild(btnConfirm);
+
+    const btnRuledOut=document.createElement("button");
+    btnRuledOut.className="cs-ghost-action-btn ghost-action-ruledout";
+    btnRuledOut.title="Rule out — not this ghost";
+    btnRuledOut.textContent="\u2715";
+    btnRuledOut.addEventListener("click",()=>toggleGhostVote(ghost.name,"ruledout"));
+    actions.appendChild(btnRuledOut);
+
+    const btnGuess=document.createElement("button");
+    btnGuess.className="cs-ghost-action-btn ghost-action-guess";
+    btnGuess.title="Guess — probably this ghost";
+    btnGuess.textContent="?";
+    btnGuess.addEventListener("click",()=>toggleGhostVote(ghost.name,"guess"));
+    actions.appendChild(btnGuess);
+
+    const btnSkull=document.createElement("button");
+    btnSkull.className="cs-ghost-action-btn ghost-action-skull";
+    btnSkull.title="I died to this ghost (personal)";
+    btnSkull.textContent="\uD83D\uDC80";
+    btnSkull.addEventListener("click",()=>toggleLocalDeath(ghost.name));
+    actions.appendChild(btnSkull);
+
+    inner.appendChild(actions);
+    card.appendChild(inner);
     grid.appendChild(card);
   });
 }
@@ -187,7 +173,6 @@ function renderCheatSheet(){
   const confirmed=Object.entries(localEvidence).filter(([,v])=>v==="confirmed").map(([k])=>k);
   const ruledOut=Object.entries(localEvidence).filter(([,v])=>v==="ruled_out").map(([k])=>k);
 
-  // For filtering, The Mimic's mimic evidence counts as real (so it won't be hidden if orb confirmed)
   function ghostMatchesFilter(ghost){
     const effectiveEvidence=ghost.mimicExtra?[...ghost.evidence,...ghost.mimicExtra]:ghost.evidence;
     const hasAllConfirmed=confirmed.every(e=>effectiveEvidence.includes(e));
@@ -198,7 +183,6 @@ function renderCheatSheet(){
   const possibleGhosts=GHOSTS.filter(ghostMatchesFilter);
   const possibleIds=new Set(possibleGhosts.flatMap(g=>g.mimicExtra?[...g.evidence,...g.mimicExtra]:g.evidence));
 
-  // Update evidence buttons
   EVIDENCE.forEach(ev=>{
     const btn=$(`cs-evi-${ev.id}`);if(!btn)return;
     btn.classList.remove("cs-evi-confirmed","cs-evi-ruled-out","cs-evi-impossible");
@@ -207,7 +191,6 @@ function renderCheatSheet(){
     else if(!possibleIds.has(ev.id)&&possibleGhosts.length>0)btn.classList.add("cs-evi-impossible");
   });
 
-  // Show/hide cards + apply vote state + skull state
   let visible=0;
   GHOSTS.forEach(ghost=>{
     const id=ghost.name.replace(/[\s']/g,"-");
@@ -215,14 +198,12 @@ function renderCheatSheet(){
     const show=possibleGhosts.includes(ghost);
     card.classList.toggle("cs-ghost-hidden",!show);
 
-    // Evidence tag highlight
     card.querySelectorAll(".cs-evi-tag[data-eid]").forEach(tag=>{
       const eid=tag.dataset.eid;
       const isMimic=tag.title==="Mimic evidence (fake)";
       if(!isMimic)tag.classList.toggle("cs-evi-tag-confirmed",localEvidence[eid]==="confirmed");
     });
 
-    // Shared vote state
     const vote=ghostVotes[ghost.name]||"none";
     card.classList.toggle("ghost-confirmed-card",vote==="confirmed");
     card.classList.toggle("ghost-ruledout-card",vote==="ruledout");
@@ -244,7 +225,6 @@ function renderCheatSheet(){
   if(counter)counter.textContent=`${visible} ghost${visible!==1?"s":""} remaining`;
 }
 
-// Cycle evidence and sync to Firestore
 async function cycleEvidence(id){
   if(!currentLobbyCode)return;
   const next=localEvidence[id]==="none"?"confirmed":localEvidence[id]==="confirmed"?"ruled_out":"none";
@@ -253,27 +233,23 @@ async function cycleEvidence(id){
   catch(e){console.error("cycleEvidence:",e);}
 }
 
-// Toggle shared ghost vote (confirmed/ruledout/guess — toggling same clears)
 async function toggleGhostVote(ghostName,voteType){
   if(!currentLobbyCode)return;
   const current=ghostVotes[ghostName]||"none";
   const next=current===voteType?"none":voteType;
   ghostVotes[ghostName]=next;
   renderCheatSheet();
-  // Store compactly: lobbies/{code}/ghostVotes/{ghostName} = "none"|"confirmed"|"ruledout"|"guess"
   try{
     const safeKey=ghostName.replace(/[\s']/g,"_");
     await updateDoc(doc(db,"lobbies",currentLobbyCode),{[`ghostVotes.${safeKey}`]:next});
   }catch(e){console.error("toggleGhostVote:",e);}
 }
 
-// Toggle personal skull (not synced)
 function toggleLocalDeath(ghostName){
   localDeaths[ghostName]=!localDeaths[ghostName];
   renderCheatSheet();
 }
 
-// Reset all evidence + ghost votes — Save & Reset
 async function saveAndReset(){
   if(!currentLobbyCode)return;
   const reset={};
@@ -297,13 +273,11 @@ async function resetCheatSheet(){
   catch(e){console.error("resetCheatSheet:",e);}
 }
 
-// I died topbar button
 async function toggleMyDeath(){
   if(!currentLobbyCode||!currentUid)return;
   myDied=!myDied;
   $("cs-death-btn").classList.toggle("cs-death-active",myDied);
   const myName=currentPlayers[currentUid]||"Someone";
-  // Store deaths in lobby doc
   try{
     const snap=await getDoc(doc(db,"lobbies",currentLobbyCode));
     if(!snap.exists())return;
@@ -314,25 +288,29 @@ async function toggleMyDeath(){
   }catch(e){console.error("toggleMyDeath:",e);}
 }
 
-// Show/update death banner from lobby snapshot
 function updateDeathBanner(deaths){
   const banner=$("cs-death-banner"),text=$("cs-death-banner-text");
-  if(!deaths||Object.keys(deaths).length===0){
-    banner.classList.add("hidden");return;
-  }
+  if(!deaths||Object.keys(deaths).length===0){banner.classList.add("hidden");return;}
   const names=Object.values(deaths).join(", ");
   text.textContent=`${names} ${Object.keys(deaths).length===1?"has":"have"} died.`;
   banner.classList.remove("hidden");
 }
 
-// Sidebar tab switching
-let activeTab="evidence";
+// ── Sidebar tabs (Ghost / Tools) ──────────────────────────────────────────────
+let activeTab="ghost";
 function switchTab(tab){
   activeTab=tab;
-  $("cs-tab-content-evidence").classList.toggle("hidden",tab!=="evidence");
-  $("cs-tab-content-linking").classList.toggle("hidden",tab!=="linking");
-  $("cs-tab-evidence").classList.toggle("cs-tab-active",tab==="evidence");
-  $("cs-tab-linking").classList.toggle("cs-tab-active",tab==="linking");
+  $("cs-tab-content-ghost").classList.toggle("hidden",tab!=="ghost");
+  $("cs-tab-content-tools").classList.toggle("hidden",tab!=="tools");
+  $("cs-tab-ghost").classList.toggle("cs-tab-active",tab==="ghost");
+  $("cs-tab-tools").classList.toggle("cs-tab-active",tab==="tools");
+}
+
+// ── Right linking panel ───────────────────────────────────────────────────────
+let linkingPanelOpen=false;
+function toggleLinkingPanel(){
+  linkingPanelOpen=!linkingPanelOpen;
+  $("cs-linking-panel").classList.toggle("cs-linking-open",linkingPanelOpen);
 }
 
 let csIsOpen=false;
@@ -408,14 +386,8 @@ function resetBettingUI(){
   const mb=$("my-bets-display");if(mb)mb.innerHTML=`<p class="my-bets-empty">No bets placed yet.</p>`;
 }
 
-// ── Event wiring (once at module load) ───────────────────────────────────────
+// ── Event wiring ──────────────────────────────────────────────────────────────
 $("settings-toggle").addEventListener("click",()=>$("settings-panel").classList.toggle("hidden"));
-// Settings button inside cheat sheet — opens the same settings panel
-$("cs-settings-btn").addEventListener("click",()=>{
-  $("settings-panel").classList.remove("hidden");
-  // The settings card is fixed top-right; just make sure it's visible
-  $("user-settings-card").classList.remove("hidden");
-});
 
 $("settings-name-save").addEventListener("click",async()=>{
   const msg=$("settings-msg");
@@ -460,11 +432,8 @@ $("delete-account-btn").addEventListener("click",async()=>{
   const msg=$("settings-msg");
   try{
     if(!confirm("Delete your account? This cannot be undone."))return;
-    // Leave lobby first if in one
     if(currentLobbyCode){await doLeave(false);}
-    // Delete Firestore user doc
     await deleteDoc(doc(db,"users",currentUid));
-    // Delete Firebase Auth user
     const user=auth.currentUser;
     if(user)await deleteUser(user);
     location.reload();
@@ -536,8 +505,9 @@ $("leave-lobby-btn").addEventListener("click",()=>doLeave(false));
 $("cs-reset-btn").addEventListener("click",()=>resetCheatSheet());
 $("cs-save-reset-btn").addEventListener("click",()=>saveAndReset());
 $("cs-death-btn").addEventListener("click",()=>toggleMyDeath());
-$("cs-tab-evidence").addEventListener("click",()=>switchTab("evidence"));
-$("cs-tab-linking").addEventListener("click",()=>switchTab("linking"));
+$("cs-tab-ghost").addEventListener("click",()=>switchTab("ghost"));
+$("cs-tab-tools").addEventListener("click",()=>switchTab("tools"));
+$("cs-linking-tab-trigger").addEventListener("click",()=>toggleLinkingPanel());
 
 async function doEndRound(){
   try{if(!isAdmin||!currentLobbyCode)return;await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"results"});}
@@ -600,7 +570,6 @@ $("payout-btn").addEventListener("click",async()=>{
 
 $("popup-close-btn").addEventListener("click",async()=>{
   $("payout-popup").classList.add("hidden");resetBettingUI();
-  // Reset ghost stuff for new round
   ghostVotes={};localDeaths={};myDied=false;
   $("cs-death-btn").classList.remove("cs-death-active");
   try{
@@ -643,6 +612,8 @@ async function doLeave(wasKicked){
   if(!currentLobbyCode)return;
   const code=currentLobbyCode;cleanupListeners();currentLobbyCode=null;isAdmin=false;lastPayoutRound=-1;
   closeCheatSheet();ghostVotes={};localDeaths={};myDied=false;
+  // Close linking panel
+  linkingPanelOpen=false;$("cs-linking-panel").classList.remove("cs-linking-open");
   try{await remove(ref(rtdb,`presence/${code}/${currentUid}`));}catch(_){}
   try{await removePlayerFromLobby(currentUid,code);}catch(_){}
   $("screen-lobby").classList.add("hidden");$("screen-landing").classList.remove("hidden");resetBettingUI();
@@ -668,7 +639,8 @@ function enterLobby(code){
   currentLobbyCode=code;lastPayoutRound=-1;ghostVotes={};localDeaths={};myDied=false;
   $("screen-landing").classList.add("hidden");$("screen-lobby").classList.remove("hidden");
   $("lobby-code-display").textContent=`Lobby: ${code}`;
-  $("cs-topbar-lobby-code").textContent=code;
+  // "Code:" prefix in cheat sheet topbar
+  $("cs-topbar-lobby-code").textContent=`Code: ${code}`;
   buildCheatSheet();setupPresence(code);
   if(unsubLobby)unsubLobby();
   unsubLobby=onSnapshot(doc(db,"lobbies",code),snap=>{
@@ -708,21 +680,16 @@ function handleLobbyUpdate(data){
   currentPlayers=data.players||{};
   if(currentLobbyCode&&!currentPlayers[currentUid]){doLeave(true);return;}
 
-  // Sync shared evidence from Firestore
   if(data.evidence){EVIDENCE.forEach(e=>{localEvidence[e.id]=data.evidence[e.id]||"none";});}
-  // Sync ghost votes
   if(data.ghostVotes){
     GHOSTS.forEach(g=>{
       const safeKey=g.name.replace(/[\s']/g,"_");
       ghostVotes[g.name]=data.ghostVotes[safeKey]||"none";
     });
   }
-  // Update death banner
   updateDeathBanner(data.deaths||{});
-
   renderCheatSheet();
 
-  // Player list
   const list=$("players-list");list.innerHTML="";
   for(const [uid,name] of Object.entries(currentPlayers)){
     const tag=document.createElement("div");
@@ -795,9 +762,6 @@ function renderMyBets(bets){
   mb.innerHTML=rows.length?rows.join(""):`<p class="my-bets-empty">No bets placed yet.</p>`;
 }
 
-// Payout math with house bonus:
-// Winners get: stake + (stake/totalWinStake)*losingPool + stake*HOUSE_BONUS
-// The house bonus applies even when there are no losers, guaranteeing a profit.
 function calculatePayouts(betsSnap,results){
   let totalPool=0;const allBets={};
   betsSnap.forEach(b=>{const d=b.data();allBets[b.id]=d;totalPool+=(d.wheel1?.amount||0)+(d.wheel2?.amount||0)+(d.wheel3?.amount||0);});
@@ -818,7 +782,7 @@ function calculatePayouts(betsSnap,results){
   return payouts;
 }
 
-// ── Desktop link (WebSocket to Electron overlay) ──────────────────────────────
+// ── Desktop link ──────────────────────────────────────────────────────────────
 let desktopWS=null;
 function connectDesktopLink(code){
   if(desktopWS){desktopWS.close();desktopWS=null;}

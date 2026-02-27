@@ -125,26 +125,9 @@ main { display: flex; gap: 20px; justify-content: center; align-items: flex-star
 }
 #cs-overlay.cs-visible { transform: translateX(0); }
 
-/* Settings icon inside cheat sheet (bottom-right) */
-#cs-settings-btn {
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
-  background: #2f3233;
-  border: #131414 solid 2px;
-  border-radius: 8px;
-  color: whitesmoke;
-  font-size: 18px;
-  width: 38px;
-  height: 38px;
-  cursor: pointer;
-  transition: border-color 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-}
-#cs-settings-btn:hover { border-color: #777; }
+/* Move the top-right settings gear inside cheat sheet */
+#cs-overlay.cs-visible ~ #user-settings-card,
+#cs-overlay:not(.hidden) ~ #user-settings-card { display: none !important; }
 
 /* Top bar */
 #cs-topbar {
@@ -155,57 +138,56 @@ main { display: flex; gap: 20px; justify-content: center; align-items: flex-star
   align-items: center;
   gap: 14px;
   padding: 10px 20px;
-  flex-wrap: wrap;
 }
 #cs-topbar-lobby-code {
   font-family: 'Phasmophobia', sans-serif;
   font-size: 20px;
   color: whitesmoke;
-  flex: 1;
-  min-width: 80px;
+  flex-shrink: 0;
 }
 #cs-ghost-count {
   font-family: 'Spectral SC', serif;
   font-size: 13px;
   color: #888;
+  flex: 1;
+  text-align: center;
 }
 #cs-topbar-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
-/* Death button in topbar */
-.cs-death-btn {
+/* Topbar spin-sized buttons */
+.cs-topbar-spin {
   font-family: 'Spectral SC', serif;
-  font-size: 12px;
-  padding: 6px 14px;
-  background: #2e1e1e;
-  border: 1px solid #b04040;
-  color: #e06c6c;
-  border-radius: 8px;
+  padding: 15px 20px;
+  border-radius: 10px;
+  border: 3px solid #131414;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: all 0.2s ease-in-out;
+  font-size: 15px;
   white-space: nowrap;
 }
-.cs-death-btn:hover { background: #3d2020; }
-.cs-death-btn.cs-death-active { background: #5a1f1f; border-color: #e06c6c; color: #fff; }
+.cs-topbar-spin:hover { transform: scale(1.06); }
 
-/* Generic action buttons in topbar */
-.cs-action-btn {
-  font-family: 'Spectral SC', serif;
-  padding: 6px 16px;
+/* Skull/death topbar button */
+.cs-death-topbar-btn {
   background: #2e1e1e;
-  border: 1px solid #e06c6c;
+  border-color: #5a2a2a !important;
   color: #e06c6c;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  transition: background 0.15s;
-  white-space: nowrap;
 }
-.cs-action-btn:hover { background: #3d2020; }
+.cs-death-topbar-btn:hover { background: #3d2020; border-color: #7a3a3a !important; }
+.cs-death-topbar-btn.cs-death-active { background: #5a1f1f; border-color: #5a2a2a !important; color: #fff; }
+
+/* Save & Reset / Reset Evidence topbar buttons */
+.cs-action-topbar-btn {
+  background: #2e1e1e;
+  border-color: #e06c6c !important;
+  color: #e06c6c;
+}
+.cs-action-topbar-btn:hover { background: #3d2020; }
 
 /* Death notification banner */
 #cs-death-banner {
@@ -223,14 +205,15 @@ main { display: flex; gap: 20px; justify-content: center; align-items: flex-star
   text-align: center;
 }
 
-/* Body: sidebar + grid */
+/* Body: left sidebar + ghost grid + right linking panel */
 #cs-body {
   display: flex;
   flex: 1;
   overflow: hidden;
+  position: relative;
 }
 
-/* Sidebar with tabs */
+/* LEFT SIDEBAR */
 #cs-sidebar {
   width: 190px;
   flex-shrink: 0;
@@ -272,6 +255,70 @@ main { display: flex; gap: 20px; justify-content: center; align-items: flex-star
   gap: 8px;
 }
 
+/* RIGHT LINKING PANEL */
+#cs-linking-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  pointer-events: none;
+  z-index: 50;
+}
+
+/* The tab trigger (link icon on left edge of panel) */
+#cs-linking-tab-trigger {
+  pointer-events: all;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) translateX(0);
+  background: #232628;
+  border: 1px solid #3a3d3e;
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  color: #888;
+  font-size: 16px;
+  width: 28px;
+  height: 52px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, right 0.3s cubic-bezier(0.4,0,0.2,1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  writing-mode: horizontal-tb;
+}
+#cs-linking-tab-trigger:hover { color: #7fd67f; background: #2a2d2e; }
+#cs-linking-panel.cs-linking-open #cs-linking-tab-trigger {
+  right: 220px;
+  color: #7fd67f;
+}
+
+/* The actual panel content */
+#cs-linking-panel-content {
+  pointer-events: all;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 220px;
+  height: 100%;
+  background: #232628;
+  border-left: 1px solid #3a3d3e;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  overflow-y: auto;
+}
+#cs-linking-panel.cs-linking-open #cs-linking-panel-content {
+  transform: translateX(0);
+}
+
 /* Evidence panel */
 #cs-evidence-panel {
   display: flex;
@@ -305,11 +352,12 @@ main { display: flex; gap: 20px; justify-content: center; align-items: flex-star
 }
 
 /* Linking tab */
-#desktop-link-bar {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+/* Linking panel inherits flex-column + gap from .cs-tab-content equivalent */
+#cs-linking-panel-content #link-status-row,
+#cs-linking-panel-content .btn-primary,
+#cs-linking-panel-content #overlay-download-btn,
+#cs-linking-panel-content #desktop-link-input { width: 100%; }
+
 #link-status-row {
   display: flex;
   align-items: center;
@@ -368,8 +416,10 @@ main { display: flex; gap: 20px; justify-content: center; align-items: flex-star
 }
 #cs-ghost-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   gap: 12px;
+  /* Uniform row height accounts for The Mimic's 4th evidence tag */
+  grid-auto-rows: 1fr;
 }
 
 /* Ghost card */
@@ -377,12 +427,12 @@ main { display: flex; gap: 20px; justify-content: center; align-items: flex-star
   background: #2f3233;
   border: 1px solid #3a3d3e;
   border-radius: 12px;
-  padding: 14px 14px;
+  padding: 14px;
   transition: opacity 0.2s, border-color 0.15s;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   position: relative;
+  /* Fill the grid row */
+  display: flex;
+  align-items: stretch;
 }
 .cs-ghost-card:hover { border-color: #555; }
 .cs-ghost-card.cs-ghost-hidden { display: none; }
@@ -392,33 +442,46 @@ main { display: flex; gap: 20px; justify-content: center; align-items: flex-star
 .cs-ghost-card.ghost-ruledout-card { opacity: 0.4; border-color: #e06c6c; }
 .cs-ghost-card.ghost-guess-card { border-color: #f0c040; }
 
-/* Ghost card top row: name + actions */
-.cs-ghost-top {
+/* Inner layout: left content + right action buttons */
+.cs-ghost-inner {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+}
+
+/* Left: name + evidence */
+.cs-ghost-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 .cs-ghost-name {
   font-family: 'Spectral SC', serif;
   font-size: 15px;
   font-weight: 600;
   color: #fff;
-  flex: 1;
 }
+
+/* Right: vertical action buttons */
 .cs-ghost-actions {
   display: flex;
+  flex-direction: column;
   gap: 4px;
   flex-shrink: 0;
+  justify-content: center;
 }
 .cs-ghost-action-btn {
   background: #1e2122;
   border: 1px solid #444;
   border-radius: 6px;
   color: #888;
-  font-size: 12px;
-  width: 24px;
-  height: 24px;
+  font-size: 13px;
+  width: 28px;
+  height: 28px;
   cursor: pointer;
   transition: all 0.15s;
   display: flex;
@@ -428,7 +491,7 @@ main { display: flex; gap: 20px; justify-content: center; align-items: flex-star
   flex-shrink: 0;
 }
 .cs-ghost-action-btn:hover { border-color: #888; color: #fff; }
-/* Active states for each action */
+/* Active states */
 .ghost-action-confirm.active { background: #1e2e1e; border-color: #7fd67f; color: #7fd67f; }
 .ghost-action-ruledout.active { background: #2e1e1e; border-color: #e06c6c; color: #e06c6c; }
 .ghost-action-guess.active { background: #2e2a10; border-color: #f0c040; color: #f0c040; }
