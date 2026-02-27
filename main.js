@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getAuth, signInAnonymously, onAuthStateChanged, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getDatabase, ref, set, remove, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -11,6 +11,11 @@ const firebaseConfig = {
 };
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),rtdb=getDatabase(app);
 
+// ── House bonus multiplier ─────────────────────────────────────────────────────
+// Winners always receive at least their stake back. The house bonus ensures
+// even solo winners profit: extra = stake * HOUSE_BONUS (0.2 = 20% bonus).
+const HOUSE_BONUS = 0.2;
+
 const WHEEL_DEFS={
   winlose:{label:"Win / Lose",options:["Win","Lose","Partial Win"]},
   ghosttype:{label:"Ghost Type",options:["Banshee","Dayan","Deogen","Demon","Gallu","Goryo","Hantu","Jinn","Mare","Moroi","Myling","Obake","Obambo","Oni","Onryo","Phantom","Poltergeist","Raiju","Revenant","Shade","Spirit","Thaye","The Mimic","The Twins","Wraith","Yokai","Yurei"]},
@@ -20,29 +25,63 @@ const WHEEL_DEFS={
   cursedobject:{label:"Cursed Object",options:["Music Box","Ouija Board","Summoning Circle","Voodoo Doll","Monkey's Paw","Tarot Cards","Haunted Mirror","None"]},
 };
 const WHEEL_KEYS=["wheel1","wheel2","wheel3"];
-const EVIDENCE=[{id:"emf",label:"EMF 5"},{id:"uv",label:"Ultraviolet"},{id:"writing",label:"Writing"},{id:"freezing",label:"Freezing"},{id:"dots",label:"D.O.T.S"},{id:"orb",label:"Ghost Orb"},{id:"spiritbox",label:"Spirit Box"}];
+
+// The Mimic has a 4th fake evidence: Ghost Orbs (not counted for filtering,
+// but shown as a note on the card). This is baked into the display layer.
+const EVIDENCE=[
+  {id:"emf",label:"EMF 5"},
+  {id:"uv",label:"Ultraviolet"},
+  {id:"writing",label:"Writing"},
+  {id:"freezing",label:"Freezing"},
+  {id:"dots",label:"D.O.T.S"},
+  {id:"orb",label:"Ghost Orb"},
+  {id:"spiritbox",label:"Spirit Box"},
+];
 const GHOSTS=[
-  {name:"Banshee",evidence:["uv","orb","dots"]},{name:"Dayan",evidence:["emf","spiritbox","dots"]},
-  {name:"Deogen",evidence:["spiritbox","writing","dots"]},{name:"Demon",evidence:["uv","freezing","writing"]},
-  {name:"Gallu",evidence:["emf","uv","spiritbox"]},{name:"Goryo",evidence:["emf","uv","dots"]},
-  {name:"Hantu",evidence:["uv","orb","freezing"]},{name:"Jinn",evidence:["emf","uv","freezing"]},
-  {name:"Mare",evidence:["orb","writing","spiritbox"]},{name:"Moroi",evidence:["spiritbox","writing","freezing"]},
-  {name:"Myling",evidence:["emf","uv","writing"]},{name:"Obake",evidence:["emf","uv","orb"]},
-  {name:"Obambo",evidence:["emf","writing","dots"]},{name:"Oni",evidence:["emf","freezing","dots"]},
-  {name:"Onryo",evidence:["orb","freezing","spiritbox"]},{name:"Phantom",evidence:["uv","orb","spiritbox"]},
-  {name:"Poltergeist",evidence:["uv","writing","spiritbox"]},{name:"Raiju",evidence:["emf","orb","dots"]},
-  {name:"Revenant",evidence:["orb","writing","freezing"]},{name:"Shade",evidence:["emf","writing","freezing"]},
-  {name:"Spirit",evidence:["emf","writing","spiritbox"]},{name:"Thaye",evidence:["orb","writing","dots"]},
-  {name:"The Mimic",evidence:["uv","freezing","spiritbox"]},{name:"The Twins",evidence:["emf","freezing","spiritbox"]},
-  {name:"Wraith",evidence:["emf","dots","spiritbox"]},{name:"Yokai",evidence:["orb","dots","spiritbox"]},
+  {name:"Banshee",evidence:["uv","orb","dots"]},
+  {name:"Dayan",evidence:["emf","spiritbox","dots"]},
+  {name:"Deogen",evidence:["spiritbox","writing","dots"]},
+  {name:"Demon",evidence:["uv","freezing","writing"]},
+  {name:"Gallu",evidence:["emf","uv","spiritbox"]},
+  {name:"Goryo",evidence:["emf","uv","dots"]},
+  {name:"Hantu",evidence:["uv","orb","freezing"]},
+  {name:"Jinn",evidence:["emf","uv","freezing"]},
+  {name:"Mare",evidence:["orb","writing","spiritbox"]},
+  {name:"Moroi",evidence:["spiritbox","writing","freezing"]},
+  {name:"Myling",evidence:["emf","uv","writing"]},
+  {name:"Obake",evidence:["emf","uv","orb"]},
+  {name:"Obambo",evidence:["emf","writing","dots"]},
+  {name:"Oni",evidence:["emf","freezing","dots"]},
+  {name:"Onryo",evidence:["orb","freezing","spiritbox"]},
+  {name:"Phantom",evidence:["uv","orb","spiritbox"]},
+  {name:"Poltergeist",evidence:["uv","writing","spiritbox"]},
+  {name:"Raiju",evidence:["emf","orb","dots"]},
+  {name:"Revenant",evidence:["orb","writing","freezing"]},
+  {name:"Shade",evidence:["emf","writing","freezing"]},
+  {name:"Spirit",evidence:["emf","writing","spiritbox"]},
+  {name:"Thaye",evidence:["orb","writing","dots"]},
+  // The Mimic: real evidence is uv/freezing/spiritbox but it ALSO mimics Ghost Orb
+  {name:"The Mimic",evidence:["uv","freezing","spiritbox"],mimicExtra:["orb"]},
+  {name:"The Twins",evidence:["emf","freezing","spiritbox"]},
+  {name:"Wraith",evidence:["emf","dots","spiritbox"]},
+  {name:"Yokai",evidence:["orb","dots","spiritbox"]},
   {name:"Yurei",evidence:["orb","freezing","dots"]},
 ];
 
+// ── State ─────────────────────────────────────────────────────────────────────
 let currentUid=null,currentLobbyCode=null,isAdmin=false,currencyLabel="Points",currentPlayers={};
 let activeWheels=["winlose","ghosttype","deaths"],unsubLobby=null,unsubBets=null,unsubPresence=null;
-let lastPayoutRound=-1,csTopbarExpanded=false;
+let lastPayoutRound=-1;
+// localEvidence: per-evidence state for cheat sheet
 let localEvidence={};
 EVIDENCE.forEach(e=>{localEvidence[e.id]="none";});
+// ghostVotes: shared across players, synced from Firestore
+// { "ghostName": "confirmed" | "ruledout" | "guess" | "none" }
+let ghostVotes={};
+// localDeaths: per-player personal skull marks (not synced)
+let localDeaths={};
+// myDeath: whether I have pressed the "I died" topbar button
+let myDied=false;
 
 const $=id=>document.getElementById(id);
 function setPointsDisplay(pts){$("points-display").textContent=`${currencyLabel}: ${pts}`;}
@@ -56,34 +95,110 @@ function getWheelOptions(typeKey,players){
   return def.options!==null?def.options:["None Dead",...Object.values(players),"All Dead"];
 }
 
-// Cheat sheet
+// ── Cheat sheet ───────────────────────────────────────────────────────────────
 function buildCheatSheet(){
   const evPanel=$("cs-evidence-panel");evPanel.innerHTML="";
   EVIDENCE.forEach(ev=>{
     const btn=document.createElement("button");
     btn.className="cs-evi-btn";btn.id=`cs-evi-${ev.id}`;btn.textContent=ev.label;
-    btn.addEventListener("click",()=>cycleEvidence(ev.id));evPanel.appendChild(btn);
+    btn.addEventListener("click",()=>cycleEvidence(ev.id));
+    evPanel.appendChild(btn);
   });
+
   const grid=$("cs-ghost-grid");grid.innerHTML="";
   GHOSTS.forEach(ghost=>{
     const card=document.createElement("div");
-    card.className="cs-ghost-card";card.id=`cs-ghost-${ghost.name.replace(/\s/g,"-")}`;
+    card.className="cs-ghost-card";
+    card.id=`cs-ghost-${ghost.name.replace(/[\s']/g,"-")}`;
+
+    // Top row: name + action buttons
+    const top=document.createElement("div");top.className="cs-ghost-top";
+
     const name=document.createElement("p");name.className="cs-ghost-name";name.textContent=ghost.name;
+    top.appendChild(name);
+
+    const actions=document.createElement("div");actions.className="cs-ghost-actions";
+
+    // Confirm button (checkmark) — shared
+    const btnConfirm=document.createElement("button");
+    btnConfirm.className="cs-ghost-action-btn ghost-action-confirm";
+    btnConfirm.title="Confirm — this is the ghost";
+    btnConfirm.textContent="\u2713";
+    btnConfirm.addEventListener("click",()=>toggleGhostVote(ghost.name,"confirmed"));
+    actions.appendChild(btnConfirm);
+
+    // Rule out (X) — shared
+    const btnRuledOut=document.createElement("button");
+    btnRuledOut.className="cs-ghost-action-btn ghost-action-ruledout";
+    btnRuledOut.title="Rule out — not this ghost";
+    btnRuledOut.textContent="\u2715";
+    btnRuledOut.addEventListener("click",()=>toggleGhostVote(ghost.name,"ruledout"));
+    actions.appendChild(btnRuledOut);
+
+    // Guess (?) — shared
+    const btnGuess=document.createElement("button");
+    btnGuess.className="cs-ghost-action-btn ghost-action-guess";
+    btnGuess.title="Guess — probably this ghost";
+    btnGuess.textContent="?";
+    btnGuess.addEventListener("click",()=>toggleGhostVote(ghost.name,"guess"));
+    actions.appendChild(btnGuess);
+
+    // Skull — personal only (died to this ghost)
+    const btnSkull=document.createElement("button");
+    btnSkull.className="cs-ghost-action-btn ghost-action-skull";
+    btnSkull.title="I died to this ghost (personal)";
+    btnSkull.textContent="\uD83D\uDC80";
+    btnSkull.addEventListener("click",()=>toggleLocalDeath(ghost.name));
+    actions.appendChild(btnSkull);
+
+    top.appendChild(actions);
+    card.appendChild(top);
+
+    // Evidence tags
     const tags=document.createElement("div");tags.className="cs-ghost-evidence";
+    const allDisplayEvidence=[...ghost.evidence];
+    // The Mimic shows Ghost Orb as a mimic evidence (dimmed/italic)
     ghost.evidence.forEach(eid=>{
       const tag=document.createElement("span");
       tag.className=`cs-evi-tag cs-evi-tag-${eid}`;
-      tag.textContent=EVIDENCE.find(e=>e.id===eid).label;tags.appendChild(tag);
+      tag.dataset.eid=eid;
+      tag.textContent=EVIDENCE.find(e=>e.id===eid).label;
+      tags.appendChild(tag);
     });
-    card.appendChild(name);card.appendChild(tags);grid.appendChild(card);
+    // Ghost Orb mimic extra
+    if(ghost.mimicExtra){
+      ghost.mimicExtra.forEach(eid=>{
+        const tag=document.createElement("span");
+        tag.className=`cs-evi-tag cs-evi-tag-${eid}`;
+        tag.dataset.eid=eid;
+        tag.style.opacity="0.55";
+        tag.style.fontStyle="italic";
+        tag.title="Mimic evidence (fake)";
+        tag.textContent=EVIDENCE.find(e=>e.id===eid).label+" (mimic)";
+        tags.appendChild(tag);
+      });
+    }
+    card.appendChild(tags);
+    grid.appendChild(card);
   });
 }
 
 function renderCheatSheet(){
   const confirmed=Object.entries(localEvidence).filter(([,v])=>v==="confirmed").map(([k])=>k);
   const ruledOut=Object.entries(localEvidence).filter(([,v])=>v==="ruled_out").map(([k])=>k);
-  const possibleGhosts=GHOSTS.filter(g=>confirmed.every(e=>g.evidence.includes(e))&&ruledOut.every(e=>!g.evidence.includes(e)));
-  const possibleIds=new Set(possibleGhosts.flatMap(g=>g.evidence));
+
+  // For filtering, The Mimic's mimic evidence counts as real (so it won't be hidden if orb confirmed)
+  function ghostMatchesFilter(ghost){
+    const effectiveEvidence=ghost.mimicExtra?[...ghost.evidence,...ghost.mimicExtra]:ghost.evidence;
+    const hasAllConfirmed=confirmed.every(e=>effectiveEvidence.includes(e));
+    const hasNoRuledOut=ruledOut.every(e=>!effectiveEvidence.includes(e));
+    return hasAllConfirmed&&hasNoRuledOut;
+  }
+
+  const possibleGhosts=GHOSTS.filter(ghostMatchesFilter);
+  const possibleIds=new Set(possibleGhosts.flatMap(g=>g.mimicExtra?[...g.evidence,...g.mimicExtra]:g.evidence));
+
+  // Update evidence buttons
   EVIDENCE.forEach(ev=>{
     const btn=$(`cs-evi-${ev.id}`);if(!btn)return;
     btn.classList.remove("cs-evi-confirmed","cs-evi-ruled-out","cs-evi-impossible");
@@ -91,21 +206,45 @@ function renderCheatSheet(){
     else if(localEvidence[ev.id]==="ruled_out")btn.classList.add("cs-evi-ruled-out");
     else if(!possibleIds.has(ev.id)&&possibleGhosts.length>0)btn.classList.add("cs-evi-impossible");
   });
+
+  // Show/hide cards + apply vote state + skull state
   let visible=0;
   GHOSTS.forEach(ghost=>{
-    const card=$(`cs-ghost-${ghost.name.replace(/\s/g,"-")}`);if(!card)return;
+    const id=ghost.name.replace(/[\s']/g,"-");
+    const card=$(`cs-ghost-${id}`);if(!card)return;
     const show=possibleGhosts.includes(ghost);
     card.classList.toggle("cs-ghost-hidden",!show);
-    card.querySelectorAll(".cs-evi-tag").forEach(tag=>{
-      const eid=[...tag.classList].find(c=>c.startsWith("cs-evi-tag-")&&c!=="cs-evi-tag-confirmed")?.replace("cs-evi-tag-","");
-      tag.classList.toggle("cs-evi-tag-confirmed",!!eid&&localEvidence[eid]==="confirmed");
+
+    // Evidence tag highlight
+    card.querySelectorAll(".cs-evi-tag[data-eid]").forEach(tag=>{
+      const eid=tag.dataset.eid;
+      const isMimic=tag.title==="Mimic evidence (fake)";
+      if(!isMimic)tag.classList.toggle("cs-evi-tag-confirmed",localEvidence[eid]==="confirmed");
     });
+
+    // Shared vote state
+    const vote=ghostVotes[ghost.name]||"none";
+    card.classList.toggle("ghost-confirmed-card",vote==="confirmed");
+    card.classList.toggle("ghost-ruledout-card",vote==="ruledout");
+    card.classList.toggle("ghost-guess-card",vote==="guess");
+
+    const btnConfirm=card.querySelector(".ghost-action-confirm");
+    const btnRuledOut=card.querySelector(".ghost-action-ruledout");
+    const btnGuess=card.querySelector(".ghost-action-guess");
+    const btnSkull=card.querySelector(".ghost-action-skull");
+    if(btnConfirm)btnConfirm.classList.toggle("active",vote==="confirmed");
+    if(btnRuledOut)btnRuledOut.classList.toggle("active",vote==="ruledout");
+    if(btnGuess)btnGuess.classList.toggle("active",vote==="guess");
+    if(btnSkull)btnSkull.classList.toggle("active",!!localDeaths[ghost.name]);
+
     if(show)visible++;
   });
+
   const counter=$("cs-ghost-count");
   if(counter)counter.textContent=`${visible} ghost${visible!==1?"s":""} remaining`;
 }
 
+// Cycle evidence and sync to Firestore
 async function cycleEvidence(id){
   if(!currentLobbyCode)return;
   const next=localEvidence[id]==="none"?"confirmed":localEvidence[id]==="confirmed"?"ruled_out":"none";
@@ -113,6 +252,43 @@ async function cycleEvidence(id){
   try{await updateDoc(doc(db,"lobbies",currentLobbyCode),{[`evidence.${id}`]:next});}
   catch(e){console.error("cycleEvidence:",e);}
 }
+
+// Toggle shared ghost vote (confirmed/ruledout/guess — toggling same clears)
+async function toggleGhostVote(ghostName,voteType){
+  if(!currentLobbyCode)return;
+  const current=ghostVotes[ghostName]||"none";
+  const next=current===voteType?"none":voteType;
+  ghostVotes[ghostName]=next;
+  renderCheatSheet();
+  // Store compactly: lobbies/{code}/ghostVotes/{ghostName} = "none"|"confirmed"|"ruledout"|"guess"
+  try{
+    const safeKey=ghostName.replace(/[\s']/g,"_");
+    await updateDoc(doc(db,"lobbies",currentLobbyCode),{[`ghostVotes.${safeKey}`]:next});
+  }catch(e){console.error("toggleGhostVote:",e);}
+}
+
+// Toggle personal skull (not synced)
+function toggleLocalDeath(ghostName){
+  localDeaths[ghostName]=!localDeaths[ghostName];
+  renderCheatSheet();
+}
+
+// Reset all evidence + ghost votes — Save & Reset
+async function saveAndReset(){
+  if(!currentLobbyCode)return;
+  const reset={};
+  EVIDENCE.forEach(e=>{reset[`evidence.${e.id}`]="none";localEvidence[e.id]="none";});
+  GHOSTS.forEach(g=>{
+    const safeKey=g.name.replace(/[\s']/g,"_");
+    reset[`ghostVotes.${safeKey}`]="none";
+    ghostVotes[g.name]="none";
+  });
+  localDeaths={};
+  renderCheatSheet();
+  try{await updateDoc(doc(db,"lobbies",currentLobbyCode),reset);}
+  catch(e){console.error("saveAndReset:",e);}
+}
+
 async function resetCheatSheet(){
   if(!currentLobbyCode)return;
   const reset={};EVIDENCE.forEach(e=>{reset[`evidence.${e.id}`]="none";localEvidence[e.id]="none";});
@@ -120,23 +296,59 @@ async function resetCheatSheet(){
   try{await updateDoc(doc(db,"lobbies",currentLobbyCode),reset);}
   catch(e){console.error("resetCheatSheet:",e);}
 }
+
+// I died topbar button
+async function toggleMyDeath(){
+  if(!currentLobbyCode||!currentUid)return;
+  myDied=!myDied;
+  $("cs-death-btn").classList.toggle("cs-death-active",myDied);
+  const myName=currentPlayers[currentUid]||"Someone";
+  // Store deaths in lobby doc
+  try{
+    const snap=await getDoc(doc(db,"lobbies",currentLobbyCode));
+    if(!snap.exists())return;
+    const deaths=snap.data().deaths||{};
+    if(myDied)deaths[currentUid]=myName;
+    else delete deaths[currentUid];
+    await updateDoc(doc(db,"lobbies",currentLobbyCode),{deaths});
+  }catch(e){console.error("toggleMyDeath:",e);}
+}
+
+// Show/update death banner from lobby snapshot
+function updateDeathBanner(deaths){
+  const banner=$("cs-death-banner"),text=$("cs-death-banner-text");
+  if(!deaths||Object.keys(deaths).length===0){
+    banner.classList.add("hidden");return;
+  }
+  const names=Object.values(deaths).join(", ");
+  text.textContent=`${names} ${Object.keys(deaths).length===1?"has":"have"} died.`;
+  banner.classList.remove("hidden");
+}
+
+// Sidebar tab switching
+let activeTab="evidence";
+function switchTab(tab){
+  activeTab=tab;
+  $("cs-tab-content-evidence").classList.toggle("hidden",tab!=="evidence");
+  $("cs-tab-content-linking").classList.toggle("hidden",tab!=="linking");
+  $("cs-tab-evidence").classList.toggle("cs-tab-active",tab==="evidence");
+  $("cs-tab-linking").classList.toggle("cs-tab-active",tab==="linking");
+}
+
 let csIsOpen=false;
 function openCheatSheet(){
-  if(csIsOpen)return;
-  csIsOpen=true;
+  if(csIsOpen)return;csIsOpen=true;
   $("cs-overlay").classList.remove("hidden");
-  // double rAF ensures the browser has painted the unhidden state before adding the transition class
   requestAnimationFrame(()=>requestAnimationFrame(()=>$("cs-overlay").classList.add("cs-visible")));
 }
 function closeCheatSheet(){
-  if(!csIsOpen)return;
-  csIsOpen=false;
+  if(!csIsOpen)return;csIsOpen=false;
   const el=$("cs-overlay");
   el.classList.remove("cs-visible");
-  el.addEventListener("transitionend",()=>{ if(!csIsOpen)el.classList.add("hidden"); },{once:true});
+  el.addEventListener("transitionend",()=>{if(!csIsOpen)el.classList.add("hidden");},{once:true});
 }
 
-// Betting cards
+// ── Betting cards ─────────────────────────────────────────────────────────────
 function renderBettingCards(){
   const main=$("main");main.innerHTML="";
   activeWheels.forEach((typeKey,i)=>{
@@ -158,7 +370,6 @@ function renderBettingCards(){
   }
 }
 
-// Outcome selectors
 function renderOutcomeSelectors(){
   const c=$("outcome-selectors");c.innerHTML="";
   activeWheels.forEach((typeKey,i)=>{
@@ -175,7 +386,6 @@ function renderOutcomeSelectors(){
   }
 }
 
-// Wheel config — no auto-save, uses Save button
 function renderWheelConfig(){
   const panel=$("wheel-config-panel");if(!panel)return;panel.innerHTML="";
   for(let i=0;i<3;i++){
@@ -198,8 +408,14 @@ function resetBettingUI(){
   const mb=$("my-bets-display");if(mb)mb.innerHTML=`<p class="my-bets-empty">No bets placed yet.</p>`;
 }
 
-// Event wiring
+// ── Event wiring (once at module load) ───────────────────────────────────────
 $("settings-toggle").addEventListener("click",()=>$("settings-panel").classList.toggle("hidden"));
+// Settings button inside cheat sheet — opens the same settings panel
+$("cs-settings-btn").addEventListener("click",()=>{
+  $("settings-panel").classList.remove("hidden");
+  // The settings card is fixed top-right; just make sure it's visible
+  $("user-settings-card").classList.remove("hidden");
+});
 
 $("settings-name-save").addEventListener("click",async()=>{
   const msg=$("settings-msg");
@@ -234,9 +450,24 @@ $("currency-select").addEventListener("change",async()=>{
 $("reset-account-btn").addEventListener("click",async()=>{
   const msg=$("settings-msg");
   try{
-    if(!confirm("Reset to 300? Cannot be undone."))return;
+    if(!confirm("Reset points to 300? Cannot be undone."))return;
     await updateDoc(doc(db,"users",currentUid),{points:300});
     setPointsDisplay(300);msg.textContent="Reset.";setTimeout(()=>{msg.textContent="";},2000);
+  }catch(e){msg.textContent="Error: "+e.message;}
+});
+
+$("delete-account-btn").addEventListener("click",async()=>{
+  const msg=$("settings-msg");
+  try{
+    if(!confirm("Delete your account? This cannot be undone."))return;
+    // Leave lobby first if in one
+    if(currentLobbyCode){await doLeave(false);}
+    // Delete Firestore user doc
+    await deleteDoc(doc(db,"users",currentUid));
+    // Delete Firebase Auth user
+    const user=auth.currentUser;
+    if(user)await deleteUser(user);
+    location.reload();
   }catch(e){msg.textContent="Error: "+e.message;}
 });
 
@@ -272,7 +503,12 @@ $("create-lobby-btn").addEventListener("click",async()=>{
       if(!code){err.textContent="Could not generate a code.";return;}
     }
     const defaultEvidence={};EVIDENCE.forEach(e=>{defaultEvidence[e.id]="none";});
-    await setDoc(doc(db,"lobbies",code),{adminUid:currentUid,round:1,phase:"betting",results:null,payouts:null,players:{[currentUid]:name},wheels:["winlose","ghosttype","deaths"],evidence:defaultEvidence});
+    const defaultVotes={};GHOSTS.forEach(g=>{defaultVotes[g.name.replace(/[\s']/g,"_")]="none";});
+    await setDoc(doc(db,"lobbies",code),{
+      adminUid:currentUid,round:1,phase:"betting",results:null,payouts:null,
+      players:{[currentUid]:name},wheels:["winlose","ghosttype","deaths"],
+      evidence:defaultEvidence,ghostVotes:defaultVotes,deaths:{}
+    });
     if(uSnap.exists()&&!uSnap.data().username){await updateDoc(doc(db,"users",currentUid),{username:name});$("settings-name-input").value=name;}
     enterLobby(code);
   }catch(e){err.textContent="Error: "+e.message;console.error(e);}
@@ -287,7 +523,6 @@ $("join-lobby-btn").addEventListener("click",async()=>{
   try{
     const snap=await getDoc(doc(db,"lobbies",code));
     if(!snap.exists()){err.textContent="Lobby not found.";return;}
-    // Merge the new player into the existing players map atomically
     const existingPlayers=snap.data().players||{};
     existingPlayers[currentUid]=name;
     await updateDoc(doc(db,"lobbies",code),{players:existingPlayers});
@@ -299,12 +534,10 @@ $("join-lobby-btn").addEventListener("click",async()=>{
 
 $("leave-lobby-btn").addEventListener("click",()=>doLeave(false));
 $("cs-reset-btn").addEventListener("click",()=>resetCheatSheet());
-
-$("cs-topbar-toggle").addEventListener("click",()=>{
-  csTopbarExpanded=!csTopbarExpanded;
-  $("cs-topbar-expanded").classList.toggle("hidden",!csTopbarExpanded);
-  $("cs-topbar-toggle").innerHTML=csTopbarExpanded?"&#9650;":"&#9660;";
-});
+$("cs-save-reset-btn").addEventListener("click",()=>saveAndReset());
+$("cs-death-btn").addEventListener("click",()=>toggleMyDeath());
+$("cs-tab-evidence").addEventListener("click",()=>switchTab("evidence"));
+$("cs-tab-linking").addEventListener("click",()=>switchTab("linking"));
 
 async function doEndRound(){
   try{if(!isAdmin||!currentLobbyCode)return;await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"results"});}
@@ -330,7 +563,11 @@ $("place-bets-btn").addEventListener("click",async()=>{
     const pts=userSnap.data().points??0;
     if(total>pts){errEl.textContent=`Not enough ${currencyLabel}. You have ${pts}, bet is ${total}.`;return;}
     await updateDoc(doc(db,"users",currentUid),{points:pts-total});setPointsDisplay(pts-total);
-    await setDoc(doc(db,"lobbies",currentLobbyCode,"bets",currentUid),{wheel1:{pick:picks[0],amount:amounts[0]},wheel2:{pick:picks[1],amount:amounts[1]},wheel3:{pick:picks[2],amount:amounts[2]}});
+    await setDoc(doc(db,"lobbies",currentLobbyCode,"bets",currentUid),{
+      wheel1:{pick:picks[0],amount:amounts[0]},
+      wheel2:{pick:picks[1],amount:amounts[1]},
+      wheel3:{pick:picks[2],amount:amounts[2]}
+    });
     const msg=$("bets-placed-msg");if(msg){msg.classList.remove("hidden");setTimeout(()=>msg.classList.add("hidden"),2500);}
   }catch(e){errEl.textContent="Error: "+e.message;console.error("placeBets:",e);}
 });
@@ -339,7 +576,9 @@ $("spin-btn").addEventListener("click",async()=>{
   try{
     if(!isAdmin||!currentLobbyCode)return;
     const resetEvidence={};EVIDENCE.forEach(e=>{resetEvidence[`evidence.${e.id}`]="none";});
-    await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"playing",...resetEvidence});
+    const resetVotes={};GHOSTS.forEach(g=>{resetVotes[`ghostVotes.${g.name.replace(/[\s']/g,"_")}`]="none";});
+    await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"playing",deaths:{},...resetEvidence,...resetVotes});
+    myDied=false;$("cs-death-btn").classList.remove("cs-death-active");
   }catch(e){console.error("fixBets:",e);alert("Error: "+e.message);}
 });
 
@@ -361,16 +600,26 @@ $("payout-btn").addEventListener("click",async()=>{
 
 $("popup-close-btn").addEventListener("click",async()=>{
   $("payout-popup").classList.add("hidden");resetBettingUI();
+  // Reset ghost stuff for new round
+  ghostVotes={};localDeaths={};myDied=false;
+  $("cs-death-btn").classList.remove("cs-death-active");
   try{
     if(!isAdmin||!currentLobbyCode)return;
     const snap=await getDoc(doc(db,"lobbies",currentLobbyCode));
     if(snap.exists()&&snap.data().phase==="payout_done"){
-      await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"betting",results:null,payouts:null,round:snap.data().round+1});
+      const defaultVotes={};GHOSTS.forEach(g=>{defaultVotes[`ghostVotes.${g.name.replace(/[\s']/g,"_")}`]="none";});
+      await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"betting",results:null,payouts:null,round:snap.data().round+1,deaths:{},...defaultVotes});
     }
   }catch(e){console.error("popupClose:",e);}
 });
 
-// Auth
+$("desktop-link-btn").addEventListener("click",()=>{
+  const code=$("desktop-link-input").value.trim();
+  if(!code||code.length!==4){setLinkStatus("error");return;}
+  connectDesktopLink(code);
+});
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
 signInAnonymously(auth).catch(e=>alert("Auth failed: "+e.message));
 onAuthStateChanged(auth,async user=>{
   if(!user)return;currentUid=user.uid;
@@ -389,16 +638,17 @@ onAuthStateChanged(auth,async user=>{
   }catch(e){alert("Startup error: "+e.message);}
 });
 
-// Leave
+// ── Leave / cleanup ───────────────────────────────────────────────────────────
 async function doLeave(wasKicked){
   if(!currentLobbyCode)return;
   const code=currentLobbyCode;cleanupListeners();currentLobbyCode=null;isAdmin=false;lastPayoutRound=-1;
-  closeCheatSheet();
+  closeCheatSheet();ghostVotes={};localDeaths={};myDied=false;
   try{await remove(ref(rtdb,`presence/${code}/${currentUid}`));}catch(_){}
   try{await removePlayerFromLobby(currentUid,code);}catch(_){}
   $("screen-lobby").classList.add("hidden");$("screen-landing").classList.remove("hidden");resetBettingUI();
   if(wasKicked){const err=$("landing-error");err.style.color="#e06c6c";err.textContent="You were kicked from the lobby.";}
 }
+
 async function removePlayerFromLobby(uid,code){
   const lobbyRef=doc(db,"lobbies",code),lobbySnap=await getDoc(lobbyRef);
   if(!lobbySnap.exists())return;
@@ -413,9 +663,9 @@ async function removePlayerFromLobby(uid,code){
   }
 }
 
-// Enter lobby
+// ── Enter lobby ───────────────────────────────────────────────────────────────
 function enterLobby(code){
-  currentLobbyCode=code;lastPayoutRound=-1;
+  currentLobbyCode=code;lastPayoutRound=-1;ghostVotes={};localDeaths={};myDied=false;
   $("screen-landing").classList.add("hidden");$("screen-lobby").classList.remove("hidden");
   $("lobby-code-display").textContent=`Lobby: ${code}`;
   $("cs-topbar-lobby-code").textContent=code;
@@ -436,7 +686,7 @@ function enterLobby(code){
   },e=>console.error("bets snapshot:",e));
 }
 
-// Presence
+// ── Presence ──────────────────────────────────────────────────────────────────
 function setupPresence(code){
   const myRef=ref(rtdb,`presence/${code}/${currentUid}`);set(myRef,{online:true});onDisconnect(myRef).remove();
   if(unsubPresence)unsubPresence();
@@ -450,15 +700,29 @@ function setupPresence(code){
   });
 }
 
-// Lobby update handler
+// ── Lobby update handler ──────────────────────────────────────────────────────
 function handleLobbyUpdate(data){
   $("lobby-round-display").textContent=`Round ${data.round}`;
   isAdmin=data.adminUid===currentUid;
   activeWheels=data.wheels||["winlose","ghosttype","deaths"];
   currentPlayers=data.players||{};
   if(currentLobbyCode&&!currentPlayers[currentUid]){doLeave(true);return;}
-  if(data.evidence){EVIDENCE.forEach(e=>{localEvidence[e.id]=data.evidence[e.id]||"none";});renderCheatSheet();}
 
+  // Sync shared evidence from Firestore
+  if(data.evidence){EVIDENCE.forEach(e=>{localEvidence[e.id]=data.evidence[e.id]||"none";});}
+  // Sync ghost votes
+  if(data.ghostVotes){
+    GHOSTS.forEach(g=>{
+      const safeKey=g.name.replace(/[\s']/g,"_");
+      ghostVotes[g.name]=data.ghostVotes[safeKey]||"none";
+    });
+  }
+  // Update death banner
+  updateDeathBanner(data.deaths||{});
+
+  renderCheatSheet();
+
+  // Player list
   const list=$("players-list");list.innerHTML="";
   for(const [uid,name] of Object.entries(currentPlayers)){
     const tag=document.createElement("div");
@@ -499,6 +763,7 @@ function handleLobbyUpdate(data){
   }
 }
 
+// ── Payout ────────────────────────────────────────────────────────────────────
 async function applyMyPayoutAndShowPopup(data){
   try{
     const myAmount=(data.payouts||{})[currentUid]||0;
@@ -530,6 +795,9 @@ function renderMyBets(bets){
   mb.innerHTML=rows.length?rows.join(""):`<p class="my-bets-empty">No bets placed yet.</p>`;
 }
 
+// Payout math with house bonus:
+// Winners get: stake + (stake/totalWinStake)*losingPool + stake*HOUSE_BONUS
+// The house bonus applies even when there are no losers, guaranteeing a profit.
 function calculatePayouts(betsSnap,results){
   let totalPool=0;const allBets={};
   betsSnap.forEach(b=>{const d=b.data();allBets[b.id]=d;totalPool+=(d.wheel1?.amount||0)+(d.wheel2?.amount||0)+(d.wheel3?.amount||0);});
@@ -540,12 +808,17 @@ function calculatePayouts(betsSnap,results){
     if(stake>0){winStakes[uid]=stake;totalWin+=stake;}
   }
   if(totalWin===0)return{};
-  const losingPool=totalPool-totalWin,payouts={};
-  for(const [uid,stake] of Object.entries(winStakes))payouts[uid]=Math.floor(stake+(stake/totalWin)*losingPool);
+  const losingPool=totalPool-totalWin;
+  const payouts={};
+  for(const [uid,stake] of Object.entries(winStakes)){
+    const shareOfLosing=losingPool>0?(stake/totalWin)*losingPool:0;
+    const houseBonus=Math.floor(stake*HOUSE_BONUS);
+    payouts[uid]=Math.floor(stake+shareOfLosing)+houseBonus;
+  }
   return payouts;
 }
 
-// Desktop link
+// ── Desktop link (WebSocket to Electron overlay) ──────────────────────────────
 let desktopWS=null;
 function connectDesktopLink(code){
   if(desktopWS){desktopWS.close();desktopWS=null;}
@@ -567,12 +840,8 @@ function setLinkStatus(status){
   const map={idle:{text:"Not connected",color:"#555"},connected:{text:"Overlay linked",color:"#7fd67f"},disconnected:{text:"Disconnected",color:"#e06c6c"},error:{text:"Could not connect",color:"#e06c6c"}};
   const s=map[status]||map.idle;el.textContent=s.text;el.style.color=s.color;dot.style.background=s.color;
 }
-$("desktop-link-btn").addEventListener("click",()=>{
-  const code=$("desktop-link-input").value.trim();
-  if(!code||code.length!==4){setLinkStatus("error");return;}
-  connectDesktopLink(code);
-});
 
+// ── Payout popup ──────────────────────────────────────────────────────────────
 function showPayoutPopup(data){
   const results=data.results||{},payouts=data.payouts||{},players=data.players||{},wheels=data.wheels||activeWheels;
   $("popup-results-display").innerHTML=WHEEL_KEYS.map((k,i)=>{

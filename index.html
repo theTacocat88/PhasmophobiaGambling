@@ -34,7 +34,8 @@
             <option value="Fingerprints">Fingerprints</option>
         </select>
 
-        <button id="reset-account-btn" class="btn-danger" style="margin-top:14px;">Reset Account</button>
+        <button id="reset-account-btn" class="btn-danger" style="margin-top:14px;">Reset Points</button>
+        <button id="delete-account-btn" class="btn-danger" style="margin-top:6px;">Delete Account</button>
         <p id="settings-msg"></p>
     </div>
 </div>
@@ -115,7 +116,7 @@
         </div>
     </div>
 
-    <!-- PLAYING PHASE (just the end round button; cheat sheet is the full-screen overlay) -->
+    <!-- PLAYING PHASE -->
     <div id="phase-playing" class="hidden">
         <div style="text-align:center; margin-top:30px;">
             <button id="end-round-btn" class="spin" style="display:none;">End Round</button>
@@ -143,37 +144,60 @@
 <!-- ===================== CHEAT SHEET FULLSCREEN OVERLAY ===================== -->
 <div id="cs-overlay" class="hidden">
 
-    <!-- Collapsible top bar -->
+    <!-- Top bar: flat, no dropdown -->
     <div id="cs-topbar">
-        <div id="cs-topbar-collapsed">
-            <span id="cs-topbar-lobby-code"></span>
-            <button id="cs-topbar-toggle" title="Show connection options">&#9660;</button>
-            <span id="cs-ghost-count"></span>
-            <button id="cs-reset-btn">Reset Evidence</button>
+        <span id="cs-topbar-lobby-code"></span>
+        <span id="cs-ghost-count"></span>
+        <div id="cs-topbar-actions">
+            <button id="cs-death-btn" class="cs-death-btn" title="I died">Skull</button>
+            <button id="cs-save-reset-btn" class="cs-action-btn">Save &amp; Reset</button>
+            <button id="cs-reset-btn" class="cs-action-btn">Reset Evidence</button>
             <button id="cs-end-round-btn" class="spin" style="display:none;">End Round</button>
-        </div>
-        <div id="cs-topbar-expanded" class="hidden">
-            <div id="desktop-link-bar">
-                <span id="link-status-dot"></span>
-                <span id="link-status-text">Not connected</span>
-                <input id="desktop-link-input" type="text" maxlength="4" placeholder="4-digit link code" />
-                <button id="desktop-link-btn" class="btn-primary">Connect Overlay</button>
-                <a id="overlay-download-btn" href="https://phasmophobiagambling.pages.dev/PhasOverlay-Setup.exe" download>Download Overlay</a>
-            </div>
         </div>
     </div>
 
-    <!-- Body: sidebar + ghost grid -->
+    <!-- Death notification banner -->
+    <div id="cs-death-banner" class="hidden">
+        <p id="cs-death-banner-text"></p>
+    </div>
+
+    <!-- Body: sidebar (with tabs) + ghost grid -->
     <div id="cs-body">
         <div id="cs-sidebar">
-            <p class="section-label" style="margin-bottom:12px;">Evidence</p>
-            <div id="cs-evidence-panel"></div>
-            <p id="cs-hint">Click to confirm &middot; again to rule out &middot; again to clear</p>
+            <!-- Sidebar tabs -->
+            <div id="cs-sidebar-tabs">
+                <button class="cs-tab-btn cs-tab-active" id="cs-tab-evidence" data-tab="evidence">Evidence</button>
+                <button class="cs-tab-btn" id="cs-tab-linking" data-tab="linking">Linking</button>
+            </div>
+
+            <!-- Evidence tab content -->
+            <div id="cs-tab-content-evidence" class="cs-tab-content">
+                <div id="cs-evidence-panel"></div>
+                <p id="cs-hint">Click to confirm &middot; again to rule out &middot; again to clear</p>
+            </div>
+
+            <!-- Linking tab content -->
+            <div id="cs-tab-content-linking" class="cs-tab-content hidden">
+                <div id="desktop-link-bar">
+                    <div id="link-status-row">
+                        <span id="link-status-dot"></span>
+                        <span id="link-status-text">Not connected</span>
+                    </div>
+                    <p class="section-label" style="margin-top:10px;">Link Code</p>
+                    <input id="desktop-link-input" type="text" maxlength="4" placeholder="4-digit code" />
+                    <button id="desktop-link-btn" class="btn-primary" style="margin-top:6px;">Connect Overlay</button>
+                    <a id="overlay-download-btn" href="https://github.com/theTacocat88/PhasmophobiaGambling/releases/download/v1.0.0/PhasOverlay-Setup.exe" download>Download Overlay</a>
+                </div>
+            </div>
         </div>
+
         <div id="cs-main">
             <div id="cs-ghost-grid"></div>
         </div>
     </div>
+
+    <!-- Settings icon in bottom-right of cheat sheet -->
+    <button id="cs-settings-btn" title="Settings">&#9881;</button>
 
 </div>
 
