@@ -237,6 +237,7 @@ body.cs-active #user-settings-card { display: none !important; }
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  padding-right: 28px; /* breathing room before the tongue */
 }
 
 #cs-sidebar-tabs {
@@ -310,26 +311,30 @@ body.cs-active #user-settings-card { display: none !important; }
 .cs-linking-trigger:hover { color: #ccc; background: #2a2d2e; }
 .cs-linking-trigger.cs-linking-open { color: #7fd67f; background: #1a2a1a; }
 
-/* Linking panel — hidden by default, revealed when sidebar expands */
+/* Linking panel — slides out from under the sidebar's right edge */
 .cs-linking-body {
   position: absolute;
   top: 0;
   bottom: 0;
-  right: 22px; /* sits immediately left of the tongue */
+  left: 100%; /* anchored to right edge of sidebar */
   width: 150px;
-  background: #232628;
-  border-left: 1px solid #3a3d3e;
+  background: #1e2122;
+  border-top: 1px solid #3a3d3e;
+  border-right: 1px solid #3a3d3e;
+  border-bottom: 1px solid #3a3d3e;
   padding: 14px 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   overflow-y: auto;
+  transform: translateX(-100%);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s;
-  z-index: 1;
+  transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
+  z-index: -1; /* behind the sidebar */
 }
 #cs-sidebar.linking-open .cs-linking-body {
+  transform: translateX(0);
   opacity: 1;
   pointer-events: all;
 }
@@ -359,13 +364,47 @@ body.cs-active #user-settings-card { display: none !important; }
 .cs-evi-confirmed { background: #1e2e1e !important; border-color: #7fd67f !important; color: #7fd67f !important; }
 .cs-evi-ruled-out { background: #2e1e1e !important; border-color: #e06c6c !important; color: #e06c6c !important; text-decoration: line-through; }
 .cs-evi-impossible { opacity: 0.3; }
-#cs-hint {
+/* Ghost speed quad box */
+#cs-speed-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 4px;
+  background: #1e2122;
+  border: 1px solid #3a3d3e;
+  border-radius: 8px;
+  padding: 8px;
+}
+.cs-speed-label {
   font-family: 'Spectral SC', serif;
   font-size: 10px;
-  color: #555;
-  line-height: 1.5;
-  margin-top: 6px;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+  display: block;
 }
+.cs-speed-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+.cs-speed-item input[type=checkbox] {
+  accent-color: #7fd67f;
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.cs-speed-item span {
+  font-family: 'Spectral SC', serif;
+  font-size: 10px;
+  color: #888;
+  user-select: none;
+  line-height: 1.2;
+}
+.cs-speed-item:has(input:checked) span { color: #7fd67f; }
 
 /* Linking body items */
 .cs-linking-body #link-status-row,
