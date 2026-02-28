@@ -261,6 +261,7 @@ async function saveAndReset(){
   });
   localDeaths={};
   renderCheatSheet();
+  pushResetToOverlay();
   try{await updateDoc(doc(db,"lobbies",currentLobbyCode),reset);}
   catch(e){console.error("saveAndReset:",e);}
 }
@@ -269,6 +270,7 @@ async function resetCheatSheet(){
   if(!currentLobbyCode)return;
   const reset={};EVIDENCE.forEach(e=>{reset[`evidence.${e.id}`]="none";localEvidence[e.id]="none";});
   renderCheatSheet();
+  pushResetToOverlay();
   try{await updateDoc(doc(db,"lobbies",currentLobbyCode),reset);}
   catch(e){console.error("resetCheatSheet:",e);}
 }
@@ -306,23 +308,26 @@ function switchTab(tab){
   $("cs-tab-tools").classList.toggle("cs-tab-active",tab==="tools");
 }
 
-// ── Right linking panel ───────────────────────────────────────────────────────
+// ── Linking accordion (sidebar) ──────────────────────────────────────────────
 let linkingPanelOpen=false;
 function toggleLinkingPanel(){
   linkingPanelOpen=!linkingPanelOpen;
-  $("cs-linking-panel").classList.toggle("cs-linking-open",linkingPanelOpen);
+  $("cs-linking-tab-trigger").classList.toggle("cs-linking-open",linkingPanelOpen);
+  $("cs-linking-panel-content").classList.toggle("hidden",!linkingPanelOpen);
 }
 
 let csIsOpen=false;
 function openCheatSheet(){
   if(csIsOpen)return;csIsOpen=true;
   $("cs-overlay").classList.remove("hidden");
+  document.body.classList.add("cs-active");
   requestAnimationFrame(()=>requestAnimationFrame(()=>$("cs-overlay").classList.add("cs-visible")));
 }
 function closeCheatSheet(){
   if(!csIsOpen)return;csIsOpen=false;
   const el=$("cs-overlay");
   el.classList.remove("cs-visible");
+  document.body.classList.remove("cs-active");
   el.addEventListener("transitionend",()=>{if(!csIsOpen)el.classList.add("hidden");},{once:true});
 }
 
@@ -510,8 +515,11 @@ $("cs-tab-tools").addEventListener("click",()=>switchTab("tools"));
 $("cs-linking-tab-trigger").addEventListener("click",()=>toggleLinkingPanel());
 
 async function doEndRound(){
-  try{if(!isAdmin||!currentLobbyCode)return;await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"results"});}
-  catch(e){console.error("endRound:",e);}
+  try{
+    if(!isAdmin||!currentLobbyCode)return;
+    pushResetToOverlay();
+    await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"results"});
+  }catch(e){console.error("endRound:",e);}
 }
 $("end-round-btn").addEventListener("click",doEndRound);
 $("cs-end-round-btn").addEventListener("click",doEndRound);
@@ -612,8 +620,10 @@ async function doLeave(wasKicked){
   if(!currentLobbyCode)return;
   const code=currentLobbyCode;cleanupListeners();currentLobbyCode=null;isAdmin=false;lastPayoutRound=-1;
   closeCheatSheet();ghostVotes={};localDeaths={};myDied=false;
-  // Close linking panel
-  linkingPanelOpen=false;$("cs-linking-panel").classList.remove("cs-linking-open");
+  // Close linking accordion
+  linkingPanelOpen=false;
+  $("cs-linking-tab-trigger").classList.remove("cs-linking-open");
+  $("cs-linking-panel-content").classList.add("hidden");
   try{await remove(ref(rtdb,`presence/${code}/${currentUid}`));}catch(_){}
   try{await removePlayerFromLobby(currentUid,code);}catch(_){}
   $("screen-lobby").classList.add("hidden");$("screen-landing").classList.remove("hidden");resetBettingUI();
@@ -689,6 +699,8 @@ function handleLobbyUpdate(data){
   }
   updateDeathBanner(data.deaths||{});
   renderCheatSheet();
+  // Push latest evidence state to this player's overlay so it stays in sync with other players
+  pushEvidenceToOverlay();
 
   const list=$("players-list");list.innerHTML="";
   for(const [uid,name] of Object.entries(currentPlayers)){
@@ -783,6 +795,17 @@ function calculatePayouts(betsSnap,results){
 }
 
 // ── Desktop link ──────────────────────────────────────────────────────────────
+// Push full evidence state to overlay (called after Firestore sync so all players' overlays stay in sync)
+function pushEvidenceToOverlay(){
+  if(!desktopWS||desktopWS.readyState!==WebSocket.OPEN)return;
+  desktopWS.send(JSON.stringify({type:"evidence-full",state:localEvidence}));
+}
+// Push a reset signal to the overlay
+function pushResetToOverlay(){
+  if(!desktopWS||desktopWS.readyState!==WebSocket.OPEN)return;
+  desktopWS.send(JSON.stringify({type:"evidence-reset"}));
+}
+
 let desktopWS=null;
 function connectDesktopLink(code){
   if(desktopWS){desktopWS.close();desktopWS=null;}
@@ -792,7 +815,9 @@ function connectDesktopLink(code){
     try{
       const msg=JSON.parse(ev.data);
       if(msg.type==="connected"){setLinkStatus("connected");if(msg.state){Object.entries(msg.state).forEach(([id,st])=>{localEvidence[id]=st;});renderCheatSheet();}}
+      // Overlay pushed an evidence change -> sync to Firestore so other players see it too
       else if(msg.type==="evidence-update"){localEvidence[msg.id]=msg.state;renderCheatSheet();if(currentLobbyCode)updateDoc(doc(db,"lobbies",currentLobbyCode),{[`evidence.${msg.id}`]:msg.state}).catch(e=>console.error(e));}
+      // Overlay reset -> sync to Firestore
       else if(msg.type==="evidence-reset"){EVIDENCE.forEach(e=>{localEvidence[e.id]="none";});renderCheatSheet();if(currentLobbyCode){const reset={};EVIDENCE.forEach(e=>{reset[`evidence.${e.id}`]="none";});updateDoc(doc(db,"lobbies",currentLobbyCode),reset).catch(e=>console.error(e));}}
     }catch(_){}
   });

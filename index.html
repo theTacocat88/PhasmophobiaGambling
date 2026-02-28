@@ -166,7 +166,22 @@
 
         <!-- LEFT SIDEBAR -->
         <div id="cs-sidebar">
-            <!-- Left sidebar tabs: Ghost / Tools -->
+            <!-- Linking accordion tab (top of sidebar, above Ghost/Tools) -->
+            <div id="cs-linking-section">
+                <button id="cs-linking-tab-trigger" class="cs-linking-trigger">&#x1F517; Linking</button>
+                <div id="cs-linking-panel-content" class="cs-linking-body hidden">
+                    <div id="link-status-row">
+                        <span id="link-status-dot"></span>
+                        <span id="link-status-text">Not connected</span>
+                    </div>
+                    <p class="section-label" style="margin-top:10px;">Link Code</p>
+                    <input id="desktop-link-input" type="text" maxlength="4" placeholder="4-digit code" />
+                    <button id="desktop-link-btn" class="btn-primary" style="margin-top:8px;">Connect Overlay</button>
+                    <a id="overlay-download-btn" href="https://github.com/theTacocat88/PhasmophobiaGambling/releases/download/v1.0.0/PhasOverlay-Setup.exe" download>Download Overlay</a>
+                </div>
+            </div>
+
+            <!-- Ghost / Tools tabs -->
             <div id="cs-sidebar-tabs">
                 <button class="cs-tab-btn cs-tab-active" id="cs-tab-ghost" data-tab="ghost">Ghost</button>
                 <button class="cs-tab-btn" id="cs-tab-tools" data-tab="tools">Tools</button>
@@ -187,24 +202,6 @@
         <!-- GHOST GRID -->
         <div id="cs-main">
             <div id="cs-ghost-grid"></div>
-        </div>
-
-        <!-- RIGHT LINKING PANEL (slide-out) -->
-        <div id="cs-linking-panel">
-            <!-- Tab trigger on the left edge -->
-            <button id="cs-linking-tab-trigger" title="Overlay Linking">&#x1F517;</button>
-            <!-- Panel content -->
-            <div id="cs-linking-panel-content">
-                <p class="section-label" style="margin-bottom:10px;">Overlay Linking</p>
-                <div id="link-status-row">
-                    <span id="link-status-dot"></span>
-                    <span id="link-status-text">Not connected</span>
-                </div>
-                <p class="section-label" style="margin-top:14px;">Link Code</p>
-                <input id="desktop-link-input" type="text" maxlength="4" placeholder="4-digit code" />
-                <button id="desktop-link-btn" class="btn-primary" style="margin-top:8px;">Connect Overlay</button>
-                <a id="overlay-download-btn" href="https://github.com/theTacocat88/PhasmophobiaGambling/releases/download/v1.0.0/PhasOverlay-Setup.exe" download>Download Overlay</a>
-            </div>
         </div>
 
     </div>
