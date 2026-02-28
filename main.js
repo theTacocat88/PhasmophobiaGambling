@@ -272,7 +272,8 @@ function renderCheatSheet(){
       if(spd){
         if(speedTypeFilter==="constant")speedShow=spd.type==="Constant";
         if(speedTypeFilter==="variable")speedShow=spd.type!=="Constant";
-        if(speedLosFilter)speedShow=speedShow&&spd.los;
+        if(speedLosFilter==='active')speedShow=speedShow&&spd.los;
+        if(speedLosFilter==='ruledout')speedShow=speedShow&&!spd.los;
       }
       card.classList.toggle("cs-ghost-speed-hidden",!speedShow);
       if(speedShow)visible++;
@@ -323,7 +324,7 @@ async function saveAndReset(){
   speedTypeFilter=null;speedLosFilter=false;
   $("cs-speed-constant")?.classList.remove("cs-speed-active");
   $("cs-speed-variable")?.classList.remove("cs-speed-active");
-  $("cs-speed-los")?.classList.remove("cs-speed-active");
+  $("cs-speed-los")?.classList.remove("cs-speed-active","cs-speed-ruledout");
   renderCheatSheet();
   pushResetToOverlay();
   try{await updateDoc(doc(db,"lobbies",currentLobbyCode),reset);}
