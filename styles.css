@@ -310,12 +310,14 @@ body.cs-active #user-settings-card { display: none !important; }
   transition: width 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.18s;
   background: #1e2122;
   border-left: 1px solid #3a3d3e;
+  box-sizing: border-box;
 }
 #cs-sidebar.linking-open .cs-linking-body {
   width: 150px;
   opacity: 1;
   pointer-events: all;
   overflow-y: auto;
+  padding: 14px 12px;
 }
 /* Inner wrapper keeps content at 150px during clip transition */
 .cs-linking-body-inner {
