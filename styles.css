@@ -214,29 +214,28 @@ body.cs-active #user-settings-card { display: none !important; }
 
 /* LEFT SIDEBAR */
 #cs-sidebar {
-  /* Base width = main content. Expands when linking panel open. */
   width: 190px;
   flex-shrink: 0;
   background-color: #232628;
   border-right: 1px solid #3a3d3e;
   display: flex;
-  flex-direction: row;
-  overflow: visible; /* allow tongue to protrude */
+  flex-direction: column;
+  overflow: hidden;
   position: relative;
   transition: width 0.28s cubic-bezier(0.4,0,0.2,1);
 }
 #cs-sidebar.linking-open {
-  width: 360px; /* 190 main + 170 panel */
+  width: 362px; /* 190 main + 150 panel + 22 tongue */
 }
 
-/* Main sidebar column */
+/* Main sidebar column — always 190px, never shrinks */
 #cs-sidebar-main {
   width: 190px;
+  min-width: 190px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-width: 0;
 }
 
 #cs-sidebar-tabs {
@@ -271,19 +270,24 @@ body.cs-active #user-settings-card { display: none !important; }
   gap: 8px;
 }
 
-/* LINKING — right-edge vertical tab + slide-in panel */
+/* LINKING — absolute tongue pinned to right edge + slide-in panel */
 #cs-linking-section {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: row;
-  flex: 1;
-  overflow: hidden;
-  border-left: 1px solid #3a3d3e;
+  pointer-events: none; /* section itself is passthrough */
 }
 
-/* Vertical tongue button on right edge of sidebar */
+/* Vertical tongue — always visible on right edge */
 .cs-linking-trigger {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
   width: 22px;
-  flex-shrink: 0;
   background: #1e2122;
   border: none;
   border-left: 1px solid #3a3d3e;
@@ -296,29 +300,32 @@ body.cs-active #user-settings-card { display: none !important; }
   writing-mode: vertical-rl;
   padding: 12px 0;
   transition: color 0.15s, background 0.15s;
-  order: 2; /* sits to the RIGHT of the panel */
+  pointer-events: all;
+  z-index: 2;
 }
 .cs-linking-trigger:hover { color: #ccc; background: #2a2d2e; }
 .cs-linking-trigger.cs-linking-open { color: #7fd67f; background: #1a2a1a; }
 
-/* Linking panel — slides in to the left of the tongue */
+/* Linking panel — hidden by default, revealed when sidebar expands */
 .cs-linking-body {
-  flex: 1;
-  overflow-y: auto;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 22px; /* sits immediately left of the tongue */
+  width: 150px;
+  background: #232628;
+  border-left: 1px solid #3a3d3e;
   padding: 14px 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  order: 1;
-  min-width: 0;
-  width: 0;
+  overflow-y: auto;
   opacity: 0;
   pointer-events: none;
-  transition: width 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
-  overflow: hidden;
+  transition: opacity 0.2s;
+  z-index: 1;
 }
 #cs-sidebar.linking-open .cs-linking-body {
-  width: 170px;
   opacity: 1;
   pointer-events: all;
 }
