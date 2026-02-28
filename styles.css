@@ -208,7 +208,8 @@ body.cs-active #user-settings-card { display: none !important; }
 #cs-body {
   display: flex;
   flex: 1;
-  overflow: hidden;
+  min-height: 0;
+  overflow: visible; /* sidebar tongue must not be clipped */
   position: relative;
 }
 
@@ -220,7 +221,7 @@ body.cs-active #user-settings-card { display: none !important; }
   border-right: 1px solid #3a3d3e;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible; /* lets the tongue tab protrude to the right */
   position: relative;
   transition: width 0.28s cubic-bezier(0.4,0,0.2,1);
 }
@@ -281,16 +282,19 @@ body.cs-active #user-settings-card { display: none !important; }
   pointer-events: none; /* section itself is passthrough */
 }
 
-/* Vertical tongue — always visible on right edge */
+/* Vertical tongue — small tab protruding out to the right of the sidebar */
 .cs-linking-trigger {
   position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
+  left: 100%; /* starts at the RIGHT edge of the sidebar, poking out */
+  top: 20px;
   width: 22px;
+  height: 80px;
   background: #1e2122;
   border: none;
-  border-left: 1px solid #3a3d3e;
+  border-top: 1px solid #3a3d3e;
+  border-right: 1px solid #3a3d3e;
+  border-bottom: 1px solid #3a3d3e;
+  border-radius: 0 6px 6px 0;
   color: #666;
   font-size: 13px;
   cursor: pointer;
@@ -298,10 +302,10 @@ body.cs-active #user-settings-card { display: none !important; }
   align-items: center;
   justify-content: center;
   writing-mode: vertical-rl;
-  padding: 12px 0;
+  padding: 8px 0;
   transition: color 0.15s, background 0.15s;
   pointer-events: all;
-  z-index: 2;
+  z-index: 10;
 }
 .cs-linking-trigger:hover { color: #ccc; background: #2a2d2e; }
 .cs-linking-trigger.cs-linking-open { color: #7fd67f; background: #1a2a1a; }
@@ -423,7 +427,9 @@ body.cs-active #user-settings-card { display: none !important; }
 #cs-main {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px;
+  min-height: 0; /* needed for flex child to scroll */
 }
 #cs-ghost-grid {
   display: grid;
