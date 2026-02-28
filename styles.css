@@ -364,47 +364,42 @@ body.cs-active #user-settings-card { display: none !important; }
 .cs-evi-confirmed { background: #1e2e1e !important; border-color: #7fd67f !important; color: #7fd67f !important; }
 .cs-evi-ruled-out { background: #2e1e1e !important; border-color: #e06c6c !important; color: #e06c6c !important; text-decoration: line-through; }
 .cs-evi-impossible { opacity: 0.3; }
-/* Ghost speed quad box */
+/* Ghost speed filter buttons — styled like evidence buttons */
 #cs-speed-box {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-top: 4px;
-  background: #1e2122;
-  border: 1px solid #3a3d3e;
-  border-radius: 8px;
-  padding: 8px;
-}
-.cs-speed-label {
-  font-family: 'Spectral SC', serif;
-  font-size: 10px;
-  color: #aaa;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 4px;
-  display: block;
-}
-.cs-speed-item {
   display: flex;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid #3a3d3e;
 }
-.cs-speed-item input[type=checkbox] {
-  accent-color: #7fd67f;
-  width: 13px;
-  height: 13px;
-  flex-shrink: 0;
-  cursor: pointer;
-}
-.cs-speed-item span {
+.cs-speed-btn {
   font-family: 'Spectral SC', serif;
-  font-size: 10px;
-  color: #888;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 2px solid #444;
+  background: #2a2d2e;
+  color: #ccc;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
   user-select: none;
-  line-height: 1.2;
+  text-align: left;
+  width: 100%;
 }
-.cs-speed-item:has(input:checked) span { color: #7fd67f; }
+.cs-speed-btn:hover { border-color: #888; color: #fff; }
+/* Active: Constant/Variable — green like confirmed evidence */
+.cs-speed-btn.cs-speed-active {
+  background: #1e2e1e !important;
+  border-color: #7fd67f !important;
+  color: #7fd67f !important;
+}
+/* LOS button — separate colour (yellow) since it stacks */
+.cs-speed-btn-los.cs-speed-active {
+  background: #2e2a10 !important;
+  border-color: #f0c040 !important;
+  color: #f0c040 !important;
+}
 
 /* Linking body items */
 .cs-linking-body #link-status-row,
@@ -492,6 +487,7 @@ body.cs-active #user-settings-card { display: none !important; }
 }
 .cs-ghost-card:hover { border-color: #555; }
 .cs-ghost-card.cs-ghost-hidden { display: none; }
+.cs-ghost-card.cs-ghost-speed-hidden { display: none; }
 
 /* Ghost card voted states */
 .cs-ghost-card.ghost-confirmed-card { border-color: #7fd67f; background: #1e2e1e; }
@@ -558,6 +554,46 @@ body.cs-active #user-settings-card { display: none !important; }
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+/* Speed info on ghost card */
+.cs-ghost-speed {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid #3a3d3e;
+}
+.cs-ghost-speed-type {
+  font-family: 'Spectral SC', serif;
+  font-size: 9px;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.cs-ghost-speed-row {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+.cs-ghost-speed-val {
+  font-family: 'Spectral SC', serif;
+  font-size: 11px;
+  color: #7fd67f;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.cs-ghost-speed-desc {
+  font-family: 'Spectral SC', serif;
+  font-size: 10px;
+  color: #666;
+}
+.cs-ghost-speed-los {
+  font-family: 'Spectral SC', serif;
+  font-size: 9px;
+  color: #f0c040;
+  margin-top: 1px;
 }
 .cs-evi-tag {
   font-family: 'Spectral SC', serif;

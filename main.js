@@ -13,6 +13,36 @@ const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),r
 
 // House bonus is calculated dynamically based on player count — see calculatePayouts()
 
+const GHOST_SPEEDS={
+  Banshee:    {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
+  Dayan:      {type:"Variable",speeds:{"1.2m/s":"Unmoving player","1.7m/s":"No player within 10m","2.25m/s":"Nearest player walking"},los:true},
+  Deogen:     {type:"Variable",speeds:{"0.4m/s":"Within 3m of player","3m/s":">3m of player"},los:false},
+  Demon:      {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
+  Gallu:      {type:"Variable",speeds:{"1.36m/s":"Weakened","1.7m/s":"Normal","1.96m/s":"Enraged"},los:true},
+  Goryo:      {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
+  Hantu:      {type:"Range",speeds:{"1.5m/s":"Lowest (warm)","2.7m/s":"Highest (freezing)"},los:false},
+  Jinn:       {type:"Variable",speeds:{"1.7m/s":"Normal","2.5m/s":"Breaker on + player >3m"},los:true},
+  Mare:       {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
+  Moroi:      {type:"Range",speeds:{"1.5m/s":"High sanity","2.25m/s":"Low sanity (0%)"},los:true},
+  Myling:     {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
+  Obake:      {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
+  Obambo:     {type:"Variable",speeds:{"1.45m/s":"Calm (changes every 2m)","1.96m/s":"Aggressive"},los:true},
+  Oni:        {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
+  Onryo:      {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
+  Phantom:    {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
+  Poltergeist:{type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
+  Raiju:      {type:"Variable",speeds:{"1.7m/s":"Normal","2.5m/s":"Within 6m of active electronics"},los:true},
+  Revenant:   {type:"Variable",speeds:{"1.0m/s":"No player","3.0m/s":"Player in sight"},los:false},
+  Shade:      {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
+  Spirit:     {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
+  Thaye:      {type:"Range",speeds:{"1.0m/s":"Old","2.75m/s":"Young"},los:false},
+  "The Mimic":{type:"Constant",speeds:{"1.7m/s":"Normal (varies by mimicked ghost)"},los:true},
+  "The Twins": {type:"Variable",speeds:{"1.5m/s":"Twin 1","1.9m/s":"Twin 2"},los:true},
+  Wraith:     {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
+  Yokai:      {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
+  Yurei:      {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
+};
+
 const WHEEL_DEFS={
   winlose:{label:"Win / Lose",options:["Win","Lose","Partial Win"]},
   ghosttype:{label:"Ghost Type",options:["Banshee","Dayan","Deogen","Demon","Gallu","Goryo","Hantu","Jinn","Mare","Moroi","Myling","Obake","Obambo","Oni","Onryo","Phantom","Poltergeist","Raiju","Revenant","Shade","Spirit","Thaye","The Mimic","The Twins","Wraith","Yokai","Yurei"]},
@@ -130,6 +160,23 @@ function buildCheatSheet(){
       });
     }
     left.appendChild(tags);
+
+    // Speed info
+    const spd=GHOST_SPEEDS[ghost.name];
+    if(spd){
+      const speedDiv=document.createElement("div");speedDiv.className="cs-ghost-speed";
+      const typeRow=document.createElement("span");typeRow.className="cs-ghost-speed-type";
+      typeRow.textContent=spd.type+(spd.los?" · LOS":" · No LOS");
+      speedDiv.appendChild(typeRow);
+      Object.entries(spd.speeds).forEach(([val,desc])=>{
+        const row=document.createElement("div");row.className="cs-ghost-speed-row";
+        const v=document.createElement("span");v.className="cs-ghost-speed-val";v.textContent=val;
+        const d=document.createElement("span");d.className="cs-ghost-speed-desc";d.textContent=desc;
+        row.appendChild(v);row.appendChild(d);speedDiv.appendChild(row);
+      });
+      left.appendChild(speedDiv);
+    }
+
     inner.appendChild(left);
 
     // Right: action buttons vertical column
@@ -218,7 +265,20 @@ function renderCheatSheet(){
     if(btnGuess)btnGuess.classList.toggle("active",vote==="guess");
     if(btnSkull)btnSkull.classList.toggle("active",!!localDeaths[ghost.name]);
 
-    if(show)visible++;
+    // Apply speed filter on top of evidence filter
+    if(show){
+      const spd=GHOST_SPEEDS[ghost.name];
+      let speedShow=true;
+      if(spd){
+        if(speedTypeFilter==="constant")speedShow=spd.type==="Constant";
+        if(speedTypeFilter==="variable")speedShow=spd.type!=="Constant";
+        if(speedLosFilter)speedShow=speedShow&&spd.los;
+      }
+      card.classList.toggle("cs-ghost-speed-hidden",!speedShow);
+      if(speedShow)visible++;
+    } else {
+      card.classList.remove("cs-ghost-speed-hidden");
+    }
   });
 
   const counter=$("cs-ghost-count");
@@ -260,6 +320,10 @@ async function saveAndReset(){
     ghostVotes[g.name]="none";
   });
   localDeaths={};
+  speedTypeFilter=null;speedLosFilter=false;
+  $("cs-speed-constant")?.classList.remove("cs-speed-active");
+  $("cs-speed-variable")?.classList.remove("cs-speed-active");
+  $("cs-speed-los")?.classList.remove("cs-speed-active");
   renderCheatSheet();
   pushResetToOverlay();
   try{await updateDoc(doc(db,"lobbies",currentLobbyCode),reset);}
@@ -306,6 +370,54 @@ function switchTab(tab){
   $("cs-tab-content-tools").classList.toggle("hidden",tab!=="tools");
   $("cs-tab-ghost").classList.toggle("cs-tab-active",tab==="ghost");
   $("cs-tab-tools").classList.toggle("cs-tab-active",tab==="tools");
+}
+
+// ── Speed filter buttons ──────────────────────────────────────────────────────
+// speedTypeFilter: null | 'constant' | 'variable'  (mutually exclusive)
+// speedLosFilter: true | false  (independent, stackable)
+let speedTypeFilter=null;
+let speedLosFilter=false;
+
+function applySpeedFilter(){
+  GHOSTS.forEach(ghost=>{
+    const id=ghost.name.replace(/[\s']/g,"-");
+    const card=$(`cs-ghost-${id}`);if(!card)return;
+    // If already hidden by evidence filter, don't override
+    if(card.classList.contains("cs-ghost-hidden"))return;
+    const spd=GHOST_SPEEDS[ghost.name];
+    if(!spd)return;
+    let show=true;
+    if(speedTypeFilter==="constant")show=show&&(spd.type==="Constant");
+    if(speedTypeFilter==="variable")show=show&&(spd.type!=="Constant");
+    if(speedLosFilter)show=show&&spd.los;
+    card.classList.toggle("cs-ghost-speed-hidden",!show);
+  });
+}
+
+function initSpeedButtons(){
+  const btnConstant=$("cs-speed-constant");
+  const btnVariable=$("cs-speed-variable");
+  const btnLos=$("cs-speed-los");
+  if(!btnConstant||!btnVariable||!btnLos)return;
+
+  // Constant / Variable — mutually exclusive toggle
+  [btnConstant,btnVariable].forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const key=btn.dataset.speed;
+      if(speedTypeFilter===key){speedTypeFilter=null;}
+      else{speedTypeFilter=key;}
+      btnConstant.classList.toggle("cs-speed-active",speedTypeFilter==="constant");
+      btnVariable.classList.toggle("cs-speed-active",speedTypeFilter==="variable");
+      renderCheatSheet();
+    });
+  });
+
+  // LOS — independent toggle
+  btnLos.addEventListener("click",()=>{
+    speedLosFilter=!speedLosFilter;
+    btnLos.classList.toggle("cs-speed-active",speedLosFilter);
+    renderCheatSheet();
+  });
 }
 
 // ── Linking side-panel ───────────────────────────────────────────────────────
@@ -662,7 +774,7 @@ function enterLobby(code){
   $("lobby-code-display").textContent=`Lobby: ${code}`;
   // "Code:" prefix in cheat sheet topbar
   $("cs-topbar-lobby-code").textContent=`Code: ${code}`;
-  buildCheatSheet();setupPresence(code);
+  buildCheatSheet();initSpeedButtons();setupPresence(code);
   if(unsubLobby)unsubLobby();
   unsubLobby=onSnapshot(doc(db,"lobbies",code),snap=>{
     if(!snap.exists()){
