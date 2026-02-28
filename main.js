@@ -11,7 +11,7 @@ const firebaseConfig = {
 };
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),rtdb=getDatabase(app);
 
-const HOUSE_BONUS = 0.2;
+// House bonus is calculated dynamically based on player count — see calculatePayouts()
 
 const WHEEL_DEFS={
   winlose:{label:"Win / Lose",options:["Win","Lose","Partial Win"]},
@@ -308,12 +308,17 @@ function switchTab(tab){
   $("cs-tab-tools").classList.toggle("cs-tab-active",tab==="tools");
 }
 
-// ── Linking accordion (sidebar) ──────────────────────────────────────────────
+// ── Linking side-panel ───────────────────────────────────────────────────────
 let linkingPanelOpen=false;
 function toggleLinkingPanel(){
   linkingPanelOpen=!linkingPanelOpen;
   $("cs-linking-tab-trigger").classList.toggle("cs-linking-open",linkingPanelOpen);
-  $("cs-linking-panel-content").classList.toggle("hidden",!linkingPanelOpen);
+  $("cs-sidebar").classList.toggle("linking-open",linkingPanelOpen);
+  // Remove hidden so CSS transition can show it; add back when closing
+  const panel=$("cs-linking-panel-content");
+  if(linkingPanelOpen){panel.classList.remove("hidden");}
+  else{// wait for transition before hiding
+    panel.addEventListener("transitionend",()=>{if(!linkingPanelOpen)panel.classList.add("hidden");},{once:true});}
 }
 
 let csIsOpen=false;
@@ -517,8 +522,13 @@ $("cs-linking-tab-trigger").addEventListener("click",()=>toggleLinkingPanel());
 async function doEndRound(){
   try{
     if(!isAdmin||!currentLobbyCode)return;
+    // Reset evidence in Firestore at same time as phase change
+    // so all clients (and their overlays) get a clean state
+    const resetEvidence={};
+    EVIDENCE.forEach(e=>{resetEvidence[`evidence.${e.id}`]="none";});
+    await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"results",...resetEvidence});
+    // Also push reset to our own overlay immediately
     pushResetToOverlay();
-    await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"results"});
   }catch(e){console.error("endRound:",e);}
 }
 $("end-round-btn").addEventListener("click",doEndRound);
@@ -620,9 +630,10 @@ async function doLeave(wasKicked){
   if(!currentLobbyCode)return;
   const code=currentLobbyCode;cleanupListeners();currentLobbyCode=null;isAdmin=false;lastPayoutRound=-1;
   closeCheatSheet();ghostVotes={};localDeaths={};myDied=false;
-  // Close linking accordion
+  // Close linking panel
   linkingPanelOpen=false;
   $("cs-linking-tab-trigger").classList.remove("cs-linking-open");
+  $("cs-sidebar").classList.remove("linking-open");
   $("cs-linking-panel-content").classList.add("hidden");
   try{await remove(ref(rtdb,`presence/${code}/${currentUid}`));}catch(_){}
   try{await removePlayerFromLobby(currentUid,code);}catch(_){}
@@ -785,10 +796,17 @@ function calculatePayouts(betsSnap,results){
   }
   if(totalWin===0)return{};
   const losingPool=totalPool-totalWin;
+  // Dynamic house bonus based on number of bettors:
+  //   1 player  → 2.0x bonus (solo needs a reason to play)
+  //   2 players → 0.5x
+  //   3 players → 0.3x
+  //   4+ players→ 0.15x (losing pool is reward enough)
+  const numBettors=Object.keys(allBets).length;
+  const houseBonusRate=numBettors<=1?2.0:numBettors===2?0.5:numBettors===3?0.3:0.15;
   const payouts={};
   for(const [uid,stake] of Object.entries(winStakes)){
     const shareOfLosing=losingPool>0?(stake/totalWin)*losingPool:0;
-    const houseBonus=Math.floor(stake*HOUSE_BONUS);
+    const houseBonus=Math.floor(stake*houseBonusRate);
     payouts[uid]=Math.floor(stake+shareOfLosing)+houseBonus;
   }
   return payouts;
