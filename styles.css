@@ -279,18 +279,21 @@ body.cs-active #user-settings-card { display: none !important; }
 .cs-linking-trigger {
   width: 22px;
   min-width: 22px;
+  height: 72px;          /* small tab, not full height */
+  align-self: flex-start; /* sit at the top of the sidebar */
   flex-shrink: 0;
   background: #1e2122;
   border: none;
   border-left: 1px solid #3a3d3e;
+  border-bottom: 1px solid #3a3d3e;
+  border-radius: 0 0 6px 0; /* rounded bottom-right corner */
   color: #555;
   font-size: 13px;
   cursor: pointer;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   writing-mode: vertical-rl;
-  padding-top: 20px;
   transition: color 0.15s, background 0.15s;
 }
 .cs-linking-trigger:hover { color: #ccc; background: #2a2d2e; }
