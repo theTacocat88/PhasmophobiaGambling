@@ -272,7 +272,8 @@ function renderCheatSheet(){
       if(spd){
         if(speedTypeFilter==="constant")speedShow=spd.type==="Constant";
         if(speedTypeFilter==="variable")speedShow=spd.type!=="Constant";
-        if(speedLosFilter)speedShow=speedShow&&spd.los;
+        if(speedLosFilter==="active")speedShow=speedShow&&spd.los;
+        if(speedLosFilter==="ruledout")speedShow=speedShow&&!spd.los;
       }
       card.classList.toggle("cs-ghost-speed-hidden",!speedShow);
       if(speedShow)visible++;
@@ -323,7 +324,7 @@ async function saveAndReset(){
   speedTypeFilter=null;speedLosFilter=false;
   $("cs-speed-constant")?.classList.remove("cs-speed-active");
   $("cs-speed-variable")?.classList.remove("cs-speed-active");
-  $("cs-speed-los")?.classList.remove("cs-speed-active");
+  $("cs-speed-los")?.classList.remove("cs-speed-active","cs-speed-ruledout");
   renderCheatSheet();
   pushResetToOverlay();
   try{await updateDoc(doc(db,"lobbies",currentLobbyCode),reset);}
@@ -412,10 +413,13 @@ function initSpeedButtons(){
     });
   });
 
-  // LOS — independent toggle
+  // LOS — 3-state: off → active (has LOS) → ruledout (no LOS) → off
   btnLos.addEventListener("click",()=>{
-    speedLosFilter=!speedLosFilter;
-    btnLos.classList.toggle("cs-speed-active",speedLosFilter);
+    if(speedLosFilter===false)speedLosFilter="active";
+    else if(speedLosFilter==="active")speedLosFilter="ruledout";
+    else speedLosFilter=false;
+    btnLos.classList.toggle("cs-speed-active",speedLosFilter==="active");
+    btnLos.classList.toggle("cs-speed-ruledout",speedLosFilter==="ruledout");
     renderCheatSheet();
   });
 }
@@ -746,7 +750,7 @@ async function doLeave(wasKicked){
   linkingPanelOpen=false;
   $("cs-linking-tab-trigger").classList.remove("cs-linking-open");
   $("cs-sidebar").classList.remove("linking-open");
-  $("cs-linking-panel-content").classList.add("hidden");
+  const lp=$("cs-linking-panel-content");lp.classList.add("hidden");
   try{await remove(ref(rtdb,`presence/${code}/${currentUid}`));}catch(_){}
   try{await removePlayerFromLobby(currentUid,code);}catch(_){}
   $("screen-lobby").classList.add("hidden");$("screen-landing").classList.remove("hidden");resetBettingUI();
