@@ -379,22 +379,6 @@ function switchTab(tab){
 let speedTypeFilter=null;
 let speedLosFilter=false;
 
-function applySpeedFilter(){
-  GHOSTS.forEach(ghost=>{
-    const id=ghost.name.replace(/[\s']/g,"-");
-    const card=$(`cs-ghost-${id}`);if(!card)return;
-    // If already hidden by evidence filter, don't override
-    if(card.classList.contains("cs-ghost-hidden"))return;
-    const spd=GHOST_SPEEDS[ghost.name];
-    if(!spd)return;
-    let show=true;
-    if(speedTypeFilter==="constant")show=show&&(spd.type==="Constant");
-    if(speedTypeFilter==="variable")show=show&&(spd.type!=="Constant");
-    if(speedLosFilter)show=show&&spd.los;
-    card.classList.toggle("cs-ghost-speed-hidden",!show);
-  });
-}
-
 function initSpeedButtons(){
   const btnConstant=$("cs-speed-constant");
   const btnVariable=$("cs-speed-variable");
