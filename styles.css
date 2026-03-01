@@ -209,32 +209,33 @@ body.cs-active #user-settings-card { display: none !important; }
   display: flex;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow: visible; /* sidebar's absolutely-positioned tongue must not be clipped */
+  position: relative;
 }
 
-/* LEFT SIDEBAR — flex row: [190px main][tongue][0→170px panel] */
+/* LEFT SIDEBAR — fixed 190px, tongue is absolutely positioned outside */
 #cs-sidebar {
-  display: flex;
-  flex-direction: row;
+  position: relative;
+  width: 190px;
   flex-shrink: 0;
   background-color: #232628;
   border-right: 1px solid #3a3d3e;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  overflow: visible; /* allows tongue + panel to poke out to the right */
   transition: width 0.28s cubic-bezier(0.4,0,0.2,1);
-  width: 212px; /* 190 + 22 tongue */
 }
 #cs-sidebar.linking-open {
-  width: 384px; /* 190 + 22 tongue + 172 panel */
+  width: 362px; /* 190 main + 172 panel */
 }
 
-/* Main sidebar column — fixed 190px */
+/* Main sidebar column — fills the 190px sidebar */
 #cs-sidebar-main {
-  width: 190px;
-  min-width: 190px;
-  flex-shrink: 0;
+  flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  width: 190px;
 }
 
 #cs-sidebar-tabs {
@@ -269,23 +270,28 @@ body.cs-active #user-settings-card { display: none !important; }
   gap: 8px;
 }
 
-/* LINKING — tongue + panel are true flex children of #cs-sidebar */
+/* LINKING — absolutely positioned outside sidebar, right edge, top-aligned */
 #cs-linking-section {
-  display: contents; /* children become direct flex items of #cs-sidebar */
+  position: absolute;
+  top: 0;
+  left: 190px; /* right edge of the 190px sidebar */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  z-index: 10;
+  pointer-events: none; /* section itself is passthrough */
 }
 
-/* Tongue: always-visible 22px vertical strip */
+/* Tongue: small clickable tab, sticks out to the right */
 .cs-linking-trigger {
   width: 22px;
-  min-width: 22px;
   height: 72px;
-  align-self: flex-start;
-  flex-shrink: 0;
   background: #1e2122;
   border: none;
-  border-left: 1px solid #3a3d3e;
+  border-top: 1px solid #3a3d3e;
+  border-right: 1px solid #3a3d3e;
   border-bottom: 1px solid #3a3d3e;
-  border-radius: 0 0 6px 0;
+  border-radius: 0 6px 6px 0;
   color: #555;
   font-size: 13px;
   cursor: pointer;
@@ -294,33 +300,35 @@ body.cs-active #user-settings-card { display: none !important; }
   justify-content: center;
   writing-mode: vertical-rl;
   transition: color 0.15s, background 0.15s;
+  pointer-events: all;
+  flex-shrink: 0;
 }
 .cs-linking-trigger:hover { color: #ccc; background: #2a2d2e; }
 .cs-linking-trigger.cs-linking-open { color: #7fd67f; background: #1a2a1a; }
 
-/* Panel: zero-width flex child, expands to 172px when open */
+/* Panel: slides open below the tongue */
 .cs-linking-body {
-  width: 0;
-  min-width: 0;
-  flex-shrink: 0;
+  width: 172px;
   overflow: hidden;
+  max-height: 0;
   opacity: 0;
   pointer-events: none;
-  transition: width 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.18s;
+  transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
   background: #1e2122;
-  border-left: 1px solid #3a3d3e;
+  border: 1px solid #3a3d3e;
+  border-top: none;
+  border-radius: 0 0 8px 0;
   box-sizing: border-box;
 }
 #cs-sidebar.linking-open .cs-linking-body {
-  width: 172px;
+  max-height: 600px;
   opacity: 1;
   pointer-events: all;
   overflow-y: auto;
 }
-/* Inner wrapper keeps content at full width while outer clips during transition */
 .cs-linking-body-inner {
   width: 172px;
-  padding: 14px 14px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
