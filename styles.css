@@ -270,22 +270,26 @@ body.cs-active #user-settings-card { display: none !important; }
   gap: 8px;
 }
 
-/* LINKING — absolutely positioned outside sidebar, right edge, top-aligned */
+/* LINKING — tongue + panel sit absolutely anchored to right edge of sidebar-main */
 #cs-linking-section {
   position: absolute;
   top: 0;
-  left: 190px; /* right edge of the 190px sidebar */
+  bottom: 0;
+  left: 190px; /* always pinned to right edge of the 190px sidebar-main */
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: flex-start;
   z-index: 10;
-  pointer-events: none; /* section itself is passthrough */
+  pointer-events: none;
 }
 
-/* Tongue: small clickable tab, sticks out to the right */
+/* Tongue: 22px vertical tab always visible, sticks out right */
 .cs-linking-trigger {
   width: 22px;
+  flex-shrink: 0;
+  align-self: flex-start;
   height: 72px;
+  margin-top: 12px;
   background: #1e2122;
   border: none;
   border-top: 1px solid #3a3d3e;
@@ -301,27 +305,27 @@ body.cs-active #user-settings-card { display: none !important; }
   writing-mode: vertical-rl;
   transition: color 0.15s, background 0.15s;
   pointer-events: all;
-  flex-shrink: 0;
 }
 .cs-linking-trigger:hover { color: #ccc; background: #2a2d2e; }
 .cs-linking-trigger.cs-linking-open { color: #7fd67f; background: #1a2a1a; }
 
-/* Panel: slides open below the tongue */
+/* Panel: clipped at width 0, expands rightward to 172px on open */
 .cs-linking-body {
-  width: 172px;
+  width: 0;
   overflow: hidden;
-  max-height: 0;
   opacity: 0;
   pointer-events: none;
-  transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
+  align-self: stretch;
+  transition: width 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
   background: #1e2122;
-  border: 1px solid #3a3d3e;
-  border-top: none;
+  border-right: 1px solid #3a3d3e;
+  border-bottom: 1px solid #3a3d3e;
+  border-top: 1px solid #3a3d3e;
   border-radius: 0 0 8px 0;
   box-sizing: border-box;
 }
 #cs-sidebar.linking-open .cs-linking-body {
-  max-height: 600px;
+  width: 172px;
   opacity: 1;
   pointer-events: all;
   overflow-y: auto;
@@ -618,3 +622,32 @@ body.cs-active #user-settings-card { display: none !important; }
 .cs-evi-tag-orb      { border-left: 3px solid #f0e060; }
 .cs-evi-tag-writing  { border-left: 3px solid #e07060; }
 .cs-evi-tag-spiritbox{ border-left: 3px solid #e06cb0; }
+
+/* Hunt sanity on ghost card */
+.cs-ghost-hunt-sanity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid #3a3d3e;
+}
+.cs-ghost-hunt-label {
+  font-family: 'Spectral SC', serif;
+  font-size: 9px;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.cs-ghost-hunt-val {
+  font-family: 'Spectral SC', serif;
+  font-size: 12px;
+  color: #e06c6c;
+  font-weight: 600;
+}
+.cs-ghost-hunt-note {
+  font-family: 'Spectral SC', serif;
+  font-size: 10px;
+  color: #888;
+  font-style: italic;
+}

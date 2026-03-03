@@ -13,6 +13,38 @@ const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),r
 
 // House bonus is calculated dynamically based on player count — see calculatePayouts()
 
+// Hunt sanity: { start: number, min?: number, max?: number, note?: string }
+// Simple ghosts: just start:50. Complex: min/max show the range, note explains conditions.
+const GHOST_HUNT_SANITY={
+  Banshee:    {start:50,note:"Checks target's sanity only"},
+  Dayan:      {start:50},
+  Deogen:     {start:40},
+  Demon:      {start:70,note:"Can hunt regardless of sanity on ability"},
+  Gallu:      {start:50},
+  Goryo:      {start:50},
+  Hantu:      {start:50},
+  Jinn:       {start:50},
+  Mare:       {min:40,start:50,max:60,note:"60% lights off · 40% lights on"},
+  Moroi:      {start:50},
+  Myling:     {start:50},
+  Obake:      {start:50},
+  Obambo:     {start:50},
+  Oni:        {start:50},
+  Onryo:      {min:40,start:60,note:"60% base · 40% near flame · hunts regardless on 3rd flame"},
+  Phantom:    {start:50},
+  Poltergeist:{start:50},
+  Raiju:      {start:50,max:65,note:"65% near active electronics"},
+  Revenant:   {start:50},
+  Shade:      {start:35,note:"Cannot hunt if a player is in its room"},
+  Spirit:     {start:50},
+  Thaye:      {min:15,start:75,note:"75% young · -6% per age · 15% old"},
+  "The Mimic":{start:50,note:"Inherits mimicked ghost's threshold"},
+  "The Twins": {start:50},
+  Wraith:     {start:50},
+  Yokai:      {start:50,max:80,note:"80% if voice chat nearby"},
+  Yurei:      {start:50},
+};
+
 const GHOST_SPEEDS={
   Banshee:    {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
   Dayan:      {type:"Variable",speeds:{"1.2m/s":"Unmoving player","1.7m/s":"No player within 10m","2.25m/s":"Nearest player walking"},los:true},
@@ -177,6 +209,30 @@ function buildCheatSheet(){
       left.appendChild(speedDiv);
     }
 
+    // Hunt sanity
+    const hs=GHOST_HUNT_SANITY[ghost.name];
+    if(hs){
+      const hsDiv=document.createElement("div");hsDiv.className="cs-ghost-hunt-sanity";
+      const hsLabel=document.createElement("span");hsLabel.className="cs-ghost-hunt-label";hsLabel.textContent="Hunt sanity: ";
+      let hsValue;
+      if(hs.min!==undefined&&hs.max!==undefined){
+        hsValue=`${hs.min}% – ${hs.start}% – ${hs.max}%`;
+      }else if(hs.min!==undefined){
+        hsValue=`${hs.min}% – ${hs.start}%`;
+      }else if(hs.max!==undefined){
+        hsValue=`${hs.start}% – ${hs.max}%`;
+      }else{
+        hsValue=`${hs.start}%`;
+      }
+      const hsVal=document.createElement("span");hsVal.className="cs-ghost-hunt-val";hsVal.textContent=hsValue;
+      hsDiv.appendChild(hsLabel);hsDiv.appendChild(hsVal);
+      if(hs.note){
+        const hsNote=document.createElement("div");hsNote.className="cs-ghost-hunt-note";hsNote.textContent=hs.note;
+        hsDiv.appendChild(hsNote);
+      }
+      left.appendChild(hsDiv);
+    }
+
     inner.appendChild(left);
 
     // Right: action buttons vertical column
@@ -334,6 +390,10 @@ async function saveAndReset(){
 async function resetCheatSheet(){
   if(!currentLobbyCode)return;
   const reset={};EVIDENCE.forEach(e=>{reset[`evidence.${e.id}`]="none";localEvidence[e.id]="none";});
+  speedTypeFilter=null;speedLosFilter=false;
+  $("cs-speed-constant")?.classList.remove("cs-speed-active");
+  $("cs-speed-variable")?.classList.remove("cs-speed-active");
+  $("cs-speed-los")?.classList.remove("cs-speed-active","cs-speed-ruledout");
   renderCheatSheet();
   pushResetToOverlay();
   try{await updateDoc(doc(db,"lobbies",currentLobbyCode),reset);}
