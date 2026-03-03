@@ -48,7 +48,7 @@ const WHEEL_DEFS={
   ghosttype:{label:"Ghost Type",options:["Banshee","Dayan","Deogen","Demon","Gallu","Goryo","Hantu","Jinn","Mare","Moroi","Myling","Obake","Obambo","Oni","Onryo","Phantom","Poltergeist","Raiju","Revenant","Shade","Spirit","Thaye","The Mimic","The Twins","Wraith","Yokai","Yurei"]},
   deaths:{label:"Deaths",options:null},
   perfectrun:{label:"Perfect Run",options:["Yes","No"]},
-  ghostspeed:{label:"Ghost Speed",options:["Slow","Medium","Fast","Variable"]},
+  ghostspeed:{label:"Ghost Speed",options:["Constant Speed", "Variable Speed"]},
   cursedobject:{label:"Cursed Object",options:["Music Box","Ouija Board","Summoning Circle","Voodoo Doll","Monkey's Paw","Tarot Cards","Haunted Mirror","None"]},
 };
 const WHEEL_KEYS=["wheel1","wheel2","wheel3"];
