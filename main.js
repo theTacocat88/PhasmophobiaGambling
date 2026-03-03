@@ -64,7 +64,7 @@ const EVIDENCE=[
 ];
 const GHOSTS=[
   {name:"Banshee",evidence:["uv","orb","dots"]},
-  {name:"Dayan",evidence:["emf","spiritbox","dots"]},
+  {name:"Dayan",evidence:["emf","spiritbox","orb"]},
   {name:"Deogen",evidence:["spiritbox","writing","dots"]},
   {name:"Demon",evidence:["uv","freezing","writing"]},
   {name:"Gallu",evidence:["emf","uv","spiritbox"]},
