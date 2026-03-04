@@ -226,7 +226,7 @@ body.cs-active #user-settings-card { display: none !important; }
   transition: width 0.28s cubic-bezier(0.4,0,0.2,1);
 }
 #cs-sidebar.linking-open {
-  width: 340px; /* 190 main + 150 panel */
+  width: 390px; /* 190 main + 22 tongue + 178 panel */
 }
 
 /* Main sidebar column — fills the 190px sidebar */
@@ -314,7 +314,7 @@ body.cs-active #user-settings-card { display: none !important; }
 /* Panel: fixed width 150px, but max-width collapses it to 0.
    visibility replaces display:none so CSS transitions aren't killed. */
 .cs-linking-body {
-  width: 150px;
+  width: 178px;
   max-width: 0;
   overflow: hidden;
   visibility: hidden;
@@ -333,7 +333,7 @@ body.cs-active #user-settings-card { display: none !important; }
   box-sizing: border-box;
 }
 #cs-sidebar.linking-open .cs-linking-body {
-  max-width: 150px;
+  max-width: 178px;
   visibility: visible;
   opacity: 1;
   pointer-events: all;
@@ -343,7 +343,7 @@ body.cs-active #user-settings-card { display: none !important; }
               visibility 0s   linear 0s;
 }
 .cs-linking-body-inner {
-  width: 150px;
+  width: 178px;
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -635,6 +635,27 @@ body.cs-active #user-settings-card { display: none !important; }
 .cs-evi-tag-orb      { border-left: 3px solid #f0e060; }
 .cs-evi-tag-writing  { border-left: 3px solid #e07060; }
 .cs-evi-tag-spiritbox{ border-left: 3px solid #e06cb0; }
+
+/* Tell box on ghost card */
+.cs-ghost-tell {
+  flex: 1;
+  min-width: 120px;
+  max-width: 220px;
+  background: #1e2122;
+  border: 1px solid #3a3d3e;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: 'Spectral SC', serif;
+  font-size: 11px;
+  color: #ccc;
+  resize: none;
+  outline: none;
+  transition: border-color 0.15s;
+  align-self: stretch;
+  line-height: 1.5;
+}
+.cs-ghost-tell::placeholder { color: #444; }
+.cs-ghost-tell:focus { border-color: #666; }
 
 /* Hunt sanity on ghost card */
 .cs-ghost-hunt-sanity {

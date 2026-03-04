@@ -235,6 +235,14 @@ function buildCheatSheet(){
 
     inner.appendChild(left);
 
+    // Tell box — free-text notes area
+    const tell=document.createElement("textarea");
+    tell.className="cs-ghost-tell";
+    tell.placeholder="Notes...";
+    tell.rows=4;
+    tell.setAttribute("spellcheck","false");
+    inner.appendChild(tell);
+
     // Right: action buttons vertical column
     const actions=document.createElement("div");actions.className="cs-ghost-actions";
 
