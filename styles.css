@@ -219,15 +219,11 @@ body.cs-active #user-settings-card { display: none !important; }
   width: 190px;
   flex-shrink: 0;
   background-color: #232628;
-  /* No border-right here — cs-sidebar-main provides the visual edge via its own border */
+  border-right: 1px solid #3a3d3e;
   display: flex;
   flex-direction: column;
   overflow: visible; /* allows tongue + panel to poke out to the right */
   transition: width 0.28s cubic-bezier(0.4,0,0.2,1);
-}
-/* sidebar-main draws the right border so it stops at the content, not full height */
-#cs-sidebar-main {
-  border-right: 1px solid #3a3d3e;
 }
 #cs-sidebar.linking-open {
   width: 390px; /* 190 main + 22 tongue + 178 panel */
@@ -287,6 +283,9 @@ body.cs-active #user-settings-card { display: none !important; }
   align-items: flex-start;
   z-index: 10;
   pointer-events: none;
+  /* Cover the sidebar bg/border bleed with the ghost grid's own bg color */
+  background-color: #2a2d2e;
+  width: 22px; /* exactly the tongue width — no wider */
 }
 
 /* Tongue: 22px vertical tab, always visible */

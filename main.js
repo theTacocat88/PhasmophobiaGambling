@@ -112,7 +112,7 @@ const WHEEL_DEFS={
   deaths:{label:"Deaths",options:null},
   perfectrun:{label:"Perfect Run",options:["Yes","No"]},
   ghostspeed:{label:"Ghost Speed",options:["Constant Speed", "Variable Speed"]},
-  cursedobject:{label:"Cursed Object",options:["Music Box","Ouija Board","Summoning Circle","Voodoo Doll","Monkey's Paw","Tarot Cards","Haunted Mirror","None"]}
+  cursedobject:{label:"Cursed Object",options:["Music Box","Ouija Board","Summoning Circle","Voodoo Doll","Monkey's Paw","Tarot Cards","Haunted Mirror","None"]},
 };
 const WHEEL_KEYS=["wheel1","wheel2","wheel3"];
 
