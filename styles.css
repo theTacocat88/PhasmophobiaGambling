@@ -219,11 +219,15 @@ body.cs-active #user-settings-card { display: none !important; }
   width: 190px;
   flex-shrink: 0;
   background-color: #232628;
-  border-right: 1px solid #3a3d3e;
+  /* No border-right here — cs-sidebar-main provides the visual edge via its own border */
   display: flex;
   flex-direction: column;
   overflow: visible; /* allows tongue + panel to poke out to the right */
   transition: width 0.28s cubic-bezier(0.4,0,0.2,1);
+}
+/* sidebar-main draws the right border so it stops at the content, not full height */
+#cs-sidebar-main {
+  border-right: 1px solid #3a3d3e;
 }
 #cs-sidebar.linking-open {
   width: 390px; /* 190 main + 22 tongue + 178 panel */
@@ -277,14 +281,12 @@ body.cs-active #user-settings-card { display: none !important; }
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 189px; /* overlap sidebar border by 1px to hide it */
+  left: 190px;
   display: flex;
   flex-direction: row;
   align-items: flex-start;
   z-index: 10;
   pointer-events: none;
-  background: #232628; /* matches sidebar bg, covers border behind tongue */
-  width: 1px; /* only cover the 1px border — tongue+panel add their own width via flex */
 }
 
 /* Tongue: 22px vertical tab, always visible */

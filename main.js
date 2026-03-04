@@ -15,33 +15,33 @@ const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),r
 
 // Tell boxes: static notes shown on each ghost card. Leave blank ("") to show no box.
 const GHOST_TELL={
-  Banshee:    "",
-  Dayan:      "",
-  Deogen:     "",
-  Demon:      "",
-  Gallu:      "",
-  Goryo:      "",
-  Hantu:      "",
-  Jinn:       "",
-  Mare:       "",
-  Moroi:      "",
-  Myling:     "",
-  Obake:      "",
-  Obambo:     "",
-  Oni:        "",
-  Onryo:      "",
-  Phantom:    "",
-  Poltergeist:"",
-  Raiju:      "",
-  Revenant:   "",
-  Shade:      "",
-  Spirit:     "",
-  Thaye:      "",
-  "The Mimic":"",
-  "The Twins": "",
-  Wraith:     "",
-  Yokai:      "",
-  Yurei:      "",
+  Banshee:    "Test",
+  Dayan:      "Test",
+  Deogen:     "Test",
+  Demon:      "Test",
+  Gallu:      "Test",
+  Goryo:      "Test",
+  Hantu:      "Test",
+  Jinn:       "Test",
+  Mare:       "Test",
+  Moroi:      "Test",
+  Myling:     "Test",
+  Obake:      "Test",
+  Obambo:     "Test",
+  Oni:        "Test",
+  Onryo:      "Test",
+  Phantom:    "Test",
+  Poltergeist:"Test",
+  Raiju:      "Test",
+  Revenant:   "Test",
+  Shade:      "Test",
+  Spirit:     "Test",
+  Thaye:      "Test",
+  "The Mimic":"Test",
+  "The Twins": "Test",
+  Wraith:     "Test",
+  Yokai:      "Test",
+  Yurei:      "Test"
 };
 
 // Hunt sanity: { start: number, min?: number, max?: number, note?: string }
@@ -73,7 +73,7 @@ const GHOST_HUNT_SANITY={
   "The Twins": {start:50},
   Wraith:     {start:50},
   Yokai:      {start:50,max:80,note:"80% if voice chat nearby"},
-  Yurei:      {start:50},
+  Yurei:      {start:50}
 };
 
 const GHOST_SPEEDS={
@@ -103,7 +103,7 @@ const GHOST_SPEEDS={
   "The Twins": {type:"Variable",speeds:{"1.5m/s":"Twin 1","1.9m/s":"Twin 2"},los:true},
   Wraith:     {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
   Yokai:      {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
-  Yurei:      {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
+  Yurei:      {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true}
 };
 
 const WHEEL_DEFS={
@@ -112,7 +112,7 @@ const WHEEL_DEFS={
   deaths:{label:"Deaths",options:null},
   perfectrun:{label:"Perfect Run",options:["Yes","No"]},
   ghostspeed:{label:"Ghost Speed",options:["Constant Speed", "Variable Speed"]},
-  cursedobject:{label:"Cursed Object",options:["Music Box","Ouija Board","Summoning Circle","Voodoo Doll","Monkey's Paw","Tarot Cards","Haunted Mirror","None"]},
+  cursedobject:{label:"Cursed Object",options:["Music Box","Ouija Board","Summoning Circle","Voodoo Doll","Monkey's Paw","Tarot Cards","Haunted Mirror","None"]}
 };
 const WHEEL_KEYS=["wheel1","wheel2","wheel3"];
 
