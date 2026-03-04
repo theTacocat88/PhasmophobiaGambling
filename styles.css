@@ -226,7 +226,7 @@ body.cs-active #user-settings-card { display: none !important; }
   transition: width 0.28s cubic-bezier(0.4,0,0.2,1);
 }
 #cs-sidebar.linking-open {
-  width: 362px; /* 190 main + 172 panel */
+  width: 340px; /* 190 main + 150 panel */
 }
 
 /* Main sidebar column — fills the 190px sidebar */
@@ -270,12 +270,14 @@ body.cs-active #user-settings-card { display: none !important; }
   gap: 8px;
 }
 
-/* LINKING — tongue + panel sit absolutely anchored to right edge of sidebar-main */
+/* LINKING — tongue lives at the right edge of #cs-sidebar-main (always 190px wide).
+   Uses max-width 0->150px for the slide so inner content stays at fixed width
+   without fighting the container. visibility replaces display:none to allow transitions. */
 #cs-linking-section {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 190px; /* always pinned to right edge of the 190px sidebar-main */
+  left: 190px;
   display: flex;
   flex-direction: row;
   align-items: flex-start;
@@ -283,7 +285,7 @@ body.cs-active #user-settings-card { display: none !important; }
   pointer-events: none;
 }
 
-/* Tongue: 22px vertical tab always visible, sticks out right */
+/* Tongue: 22px vertical tab, always visible */
 .cs-linking-trigger {
   width: 22px;
   flex-shrink: 0;
@@ -309,14 +311,20 @@ body.cs-active #user-settings-card { display: none !important; }
 .cs-linking-trigger:hover { color: #ccc; background: #2a2d2e; }
 .cs-linking-trigger.cs-linking-open { color: #7fd67f; background: #1a2a1a; }
 
-/* Panel: clipped at width 0, expands rightward to 172px on open */
+/* Panel: fixed width 150px, but max-width collapses it to 0.
+   visibility replaces display:none so CSS transitions aren't killed. */
 .cs-linking-body {
-  width: 0;
+  width: 150px;
+  max-width: 0;
   overflow: hidden;
+  visibility: hidden;
   opacity: 0;
   pointer-events: none;
   align-self: stretch;
-  transition: width 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.2s;
+  flex-shrink: 0;
+  transition: max-width 0.3s cubic-bezier(0.4,0,0.2,1),
+              opacity    0.25s cubic-bezier(0.4,0,0.2,1),
+              visibility 0s   linear 0.3s;
   background: #1e2122;
   border-right: 1px solid #3a3d3e;
   border-bottom: 1px solid #3a3d3e;
@@ -325,20 +333,25 @@ body.cs-active #user-settings-card { display: none !important; }
   box-sizing: border-box;
 }
 #cs-sidebar.linking-open .cs-linking-body {
-  width: 172px;
+  max-width: 150px;
+  visibility: visible;
   opacity: 1;
   pointer-events: all;
   overflow-y: auto;
+  transition: max-width 0.3s cubic-bezier(0.4,0,0.2,1),
+              opacity    0.25s cubic-bezier(0.4,0,0.2,1),
+              visibility 0s   linear 0s;
 }
 .cs-linking-body-inner {
-  width: 172px;
+  width: 150px;
   padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   box-sizing: border-box;
 }
-.cs-linking-body.hidden { display: none !important; }
+/* .hidden no longer needed on linking panel but keep rule harmless */
+.cs-linking-body.hidden { visibility: hidden !important; max-width: 0 !important; }
 
 /* Evidence panel */
 #cs-evidence-panel {

@@ -474,11 +474,7 @@ function toggleLinkingPanel(){
   linkingPanelOpen=!linkingPanelOpen;
   $("cs-linking-tab-trigger").classList.toggle("cs-linking-open",linkingPanelOpen);
   $("cs-sidebar").classList.toggle("linking-open",linkingPanelOpen);
-  // Remove hidden so CSS transition can show it; add back when closing
-  const panel=$("cs-linking-panel-content");
-  if(linkingPanelOpen){panel.classList.remove("hidden");}
-  else{// wait for transition before hiding
-    panel.addEventListener("transitionend",()=>{if(!linkingPanelOpen)panel.classList.add("hidden");},{once:true});}
+  // CSS handles visibility/max-width transitions — no display toggling needed
 }
 
 let csIsOpen=false;
@@ -794,7 +790,6 @@ async function doLeave(wasKicked){
   linkingPanelOpen=false;
   $("cs-linking-tab-trigger").classList.remove("cs-linking-open");
   $("cs-sidebar").classList.remove("linking-open");
-  const lp=$("cs-linking-panel-content");lp.classList.add("hidden");
   try{await remove(ref(rtdb,`presence/${code}/${currentUid}`));}catch(_){}
   try{await removePlayerFromLobby(currentUid,code);}catch(_){}
   $("screen-lobby").classList.add("hidden");$("screen-landing").classList.remove("hidden");resetBettingUI();
