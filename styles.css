@@ -219,7 +219,6 @@ body.cs-active #user-settings-card { display: none !important; }
   width: 190px;
   flex-shrink: 0;
   background-color: #232628;
-  border-right: 1px solid #3a3d3e;
   display: flex;
   flex-direction: column;
   overflow: visible; /* allows tongue + panel to poke out to the right */
@@ -283,9 +282,6 @@ body.cs-active #user-settings-card { display: none !important; }
   align-items: flex-start;
   z-index: 10;
   pointer-events: none;
-  /* Cover the sidebar bg/border bleed with the ghost grid's own bg color */
-  background-color: #2a2d2e;
-  width: 22px; /* exactly the tongue width — no wider */
 }
 
 /* Tongue: 22px vertical tab, always visible */
@@ -298,6 +294,7 @@ body.cs-active #user-settings-card { display: none !important; }
   background: #1e2122;
   border: none;
   border-top: 1px solid #3a3d3e;
+  border-left: 1px solid #3a3d3e;
   border-right: 1px solid #3a3d3e;
   border-bottom: 1px solid #3a3d3e;
   border-radius: 0 6px 6px 0;
