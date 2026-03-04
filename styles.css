@@ -326,10 +326,10 @@ body.cs-active #user-settings-card { display: none !important; }
               opacity    0.25s cubic-bezier(0.4,0,0.2,1),
               visibility 0s   linear 0.3s;
   background: #1e2122;
-  border-right: 1px solid #3a3d3e;
+  border-left: 1px solid #3a3d3e;
   border-bottom: 1px solid #3a3d3e;
   border-top: 1px solid #3a3d3e;
-  border-radius: 0 0 8px 0;
+  border-radius: 0 0 0 8px;
   box-sizing: border-box;
 }
 #cs-sidebar.linking-open .cs-linking-body {
