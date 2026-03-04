@@ -277,12 +277,14 @@ body.cs-active #user-settings-card { display: none !important; }
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 190px;
+  left: 189px; /* overlap sidebar border by 1px to hide it */
   display: flex;
   flex-direction: row;
   align-items: flex-start;
   z-index: 10;
   pointer-events: none;
+  background: #232628; /* matches sidebar bg, covers border behind tongue */
+  width: 1px; /* only cover the 1px border — tongue+panel add their own width via flex */
 }
 
 /* Tongue: 22px vertical tab, always visible */
@@ -648,14 +650,12 @@ body.cs-active #user-settings-card { display: none !important; }
   font-family: 'Spectral SC', serif;
   font-size: 11px;
   color: #ccc;
-  resize: none;
-  outline: none;
-  transition: border-color 0.15s;
   align-self: stretch;
-  line-height: 1.5;
+  line-height: 1.6;
+  overflow-y: auto;
+  user-select: none;
+  white-space: pre-wrap;
 }
-.cs-ghost-tell::placeholder { color: #444; }
-.cs-ghost-tell:focus { border-color: #666; }
 
 /* Hunt sanity on ghost card */
 .cs-ghost-hunt-sanity {

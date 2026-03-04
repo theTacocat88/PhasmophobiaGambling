@@ -13,6 +13,37 @@ const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),r
 
 // House bonus is calculated dynamically based on player count — see calculatePayouts()
 
+// Tell boxes: static notes shown on each ghost card. Leave blank ("") to show no box.
+const GHOST_TELL={
+  Banshee:    "",
+  Dayan:      "",
+  Deogen:     "",
+  Demon:      "",
+  Gallu:      "",
+  Goryo:      "",
+  Hantu:      "",
+  Jinn:       "",
+  Mare:       "",
+  Moroi:      "",
+  Myling:     "",
+  Obake:      "",
+  Obambo:     "",
+  Oni:        "",
+  Onryo:      "",
+  Phantom:    "",
+  Poltergeist:"",
+  Raiju:      "",
+  Revenant:   "",
+  Shade:      "",
+  Spirit:     "",
+  Thaye:      "",
+  "The Mimic":"",
+  "The Twins": "",
+  Wraith:     "",
+  Yokai:      "",
+  Yurei:      "",
+};
+
 // Hunt sanity: { start: number, min?: number, max?: number, note?: string }
 // Simple ghosts: just start:50. Complex: min/max show the range, note explains conditions.
 const GHOST_HUNT_SANITY={
@@ -235,13 +266,14 @@ function buildCheatSheet(){
 
     inner.appendChild(left);
 
-    // Tell box — free-text notes area
-    const tell=document.createElement("textarea");
-    tell.className="cs-ghost-tell";
-    tell.placeholder="Notes...";
-    tell.rows=4;
-    tell.setAttribute("spellcheck","false");
-    inner.appendChild(tell);
+    // Tell box — static notes from GHOST_TELL dict
+    const tellText=GHOST_TELL[ghost.name];
+    if(tellText){
+      const tell=document.createElement("div");
+      tell.className="cs-ghost-tell";
+      tell.textContent=tellText;
+      inner.appendChild(tell);
+    }
 
     // Right: action buttons vertical column
     const actions=document.createElement("div");actions.className="cs-ghost-actions";
