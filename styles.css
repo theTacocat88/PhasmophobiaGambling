@@ -604,6 +604,7 @@ body.cs-active #user-settings-card { display: none !important; }
   flex: 1;
   min-width: 120px;
   max-width: 220px;
+  max-height: 120px;
   background: #1e2122;
   border: 1px solid #3a3d3e;
   border-radius: 8px;
@@ -611,7 +612,6 @@ body.cs-active #user-settings-card { display: none !important; }
   font-family: 'Spectral SC', serif;
   font-size: 11px;
   color: #ccc;
-  align-self: stretch;
   line-height: 1.6;
   overflow-y: auto;
   user-select: none;
