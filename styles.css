@@ -604,7 +604,7 @@ body.cs-active #user-settings-card { display: none !important; }
   flex: 1;
   min-width: 120px;
   max-width: 220px;
-  max-height: 120px;
+  align-self: stretch;
   background: #1e2122;
   border: 1px solid #3a3d3e;
   border-radius: 8px;
@@ -614,9 +614,11 @@ body.cs-active #user-settings-card { display: none !important; }
   color: #ccc;
   line-height: 1.6;
   overflow-y: auto;
+  scrollbar-width: none;
   user-select: none;
   white-space: pre-wrap;
 }
+.cs-ghost-tell::-webkit-scrollbar { display: none; }
 
 .cs-ghost-hunt-sanity {
   display: flex;
