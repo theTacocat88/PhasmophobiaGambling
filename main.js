@@ -12,37 +12,50 @@ const firebaseConfig = {
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),rtdb=getDatabase(app);
 
 const GHOST_TELL={
-  Banshee:    "Test",
-  Dayan:      "Test",
-  Deogen:     "Test",
-  Demon:      "Test",
-  Gallu:      "Test",
-  Goryo:      "Test",
-  Hantu:      "Test",
-  Jinn:       "Test",
-  Mare:       "Test",
-  Moroi:      "Test",
-  Myling:     "Test",
-  Obake:      "Test",
-  Obambo:     "Test",
-  Oni:        "Test",
-  Onryo:      "Test",
-  Phantom:    "Test",
-  Poltergeist:"Test",
-  Raiju:      "Test",
-  Revenant:   "Test",
-  Shade:      "Test",
-  Spirit:     "Test",
-  Thaye:      "Test",
-  "The Mimic":"Test",
-  "The Twins": "Test",
-  Wraith:     "Test",
-  Yokai:      "Test",
-  Yurei:      "Test"
+  Banshee:    `
+  Tells:
+  - Can only be female (model/name)
+  - 33% chance for 1/20 unique screams through parabolic microphone/sound recorder
+  Ex.: Placeholder
+  - Hunts based off of target's sanity
+  - Will only pursue target during hunt (if target inside)
+  - Target loses 15% sanity if they touch ghost during event instead of 10%
+  Abilities:
+  - 66% chance to stalk/roam to target w/o EMF reading (except between floors, or if target outside)
+  More Sanity Info:
+  - If target's sanity is 50% or lower even if outside - can hunt as early as 87% av. sanity, or as low as 12%
+  `,
+  Dayan:      `
+  
+  `,
+  Deogen:     ``,
+  Demon:      ``,
+  Gallu:      ``,
+  Goryo:      ``,
+  Hantu:      ``,
+  Jinn:       ``,
+  Mare:       ``,
+  Moroi:      ``,
+  Myling:     ``,
+  Obake:      ``,
+  Obambo:     ``,
+  Oni:        ``,
+  Onryo:      ``,
+  Phantom:    ``,
+  Poltergeist:``,
+  Raiju:      ``,
+  Revenant:   ``,
+  Shade:      ``,
+  Spirit:     ``,
+  Thaye:      ``,
+  "The Mimic":``,
+  "The Twins": ``,
+  Wraith:     ``,
+  Yokai:      ``,
+  Yurei:      ``
 };
-
 const GHOST_HUNT_SANITY={
-  Banshee:    {start:50,note:"Checks target's sanity only"},
+  Banshee:    {min:12,start:50,max:87,note:"Checks target's sanity only"},
   Dayan:      {start:50},
   Deogen:     {start:40},
   Demon:      {start:70,note:"Can hunt regardless of sanity on ability"},
