@@ -11,9 +11,6 @@ const firebaseConfig = {
 };
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),rtdb=getDatabase(app);
 
-// House bonus is calculated dynamically based on player count — see calculatePayouts()
-
-// Tell boxes: static notes shown on each ghost card. Leave blank ("") to show no box.
 const GHOST_TELL={
   Banshee:    "Test",
   Dayan:      "Test",
@@ -44,8 +41,6 @@ const GHOST_TELL={
   Yurei:      "Test"
 };
 
-// Hunt sanity: { start: number, min?: number, max?: number, note?: string }
-// Simple ghosts: just start:50. Complex: min/max show the range, note explains conditions.
 const GHOST_HUNT_SANITY={
   Banshee:    {start:50,note:"Checks target's sanity only"},
   Dayan:      {start:50},
@@ -155,7 +150,6 @@ const GHOSTS=[
   {name:"Yurei",evidence:["orb","freezing","dots"]},
 ];
 
-// ── State ─────────────────────────────────────────────────────────────────────
 let currentUid=null,currentLobbyCode=null,isAdmin=false,currencyLabel="Points",currentPlayers={};
 let activeWheels=["winlose","ghosttype","deaths"],unsubLobby=null,unsubBets=null,unsubPresence=null;
 let lastPayoutRound=-1;
@@ -177,7 +171,6 @@ function getWheelOptions(typeKey,players){
   return def.options!==null?def.options:["None Dead",...Object.values(players),"All Dead"];
 }
 
-// ── Cheat sheet ───────────────────────────────────────────────────────────────
 function buildCheatSheet(){
   const evPanel=$("cs-evidence-panel");evPanel.innerHTML="";
   EVIDENCE.forEach(ev=>{
@@ -193,10 +186,10 @@ function buildCheatSheet(){
     card.className="cs-ghost-card";
     card.id=`cs-ghost-${ghost.name.replace(/[\s']/g,"-")}`;
 
-    // Card inner: left side (name + evidence) + right side (actions column)
+    
     const inner=document.createElement("div");inner.className="cs-ghost-inner";
 
-    // Left: name + evidence tags
+    
     const left=document.createElement("div");left.className="cs-ghost-left";
 
     const name=document.createElement("p");name.className="cs-ghost-name";name.textContent=ghost.name;
@@ -224,7 +217,7 @@ function buildCheatSheet(){
     }
     left.appendChild(tags);
 
-    // Speed info
+    
     const spd=GHOST_SPEEDS[ghost.name];
     if(spd){
       const speedDiv=document.createElement("div");speedDiv.className="cs-ghost-speed";
@@ -240,7 +233,7 @@ function buildCheatSheet(){
       left.appendChild(speedDiv);
     }
 
-    // Hunt sanity
+    
     const hs=GHOST_HUNT_SANITY[ghost.name];
     if(hs){
       const hsDiv=document.createElement("div");hsDiv.className="cs-ghost-hunt-sanity";
@@ -266,7 +259,7 @@ function buildCheatSheet(){
 
     inner.appendChild(left);
 
-    // Tell box — static notes from GHOST_TELL dict
+    
     const tellText=GHOST_TELL[ghost.name];
     if(tellText){
       const tell=document.createElement("div");
@@ -275,7 +268,7 @@ function buildCheatSheet(){
       inner.appendChild(tell);
     }
 
-    // Right: action buttons vertical column
+    
     const actions=document.createElement("div");actions.className="cs-ghost-actions";
 
     const btnConfirm=document.createElement("button");
@@ -361,7 +354,7 @@ function renderCheatSheet(){
     if(btnGuess)btnGuess.classList.toggle("active",vote==="guess");
     if(btnSkull)btnSkull.classList.toggle("active",!!localDeaths[ghost.name]);
 
-    // Apply speed filter on top of evidence filter
+    
     if(show){
       const spd=GHOST_SPEEDS[ghost.name];
       let speedShow=true;
@@ -463,7 +456,6 @@ function updateDeathBanner(deaths){
   banner.classList.remove("hidden");
 }
 
-// ── Sidebar tabs (Ghost / Tools) ──────────────────────────────────────────────
 let activeTab="ghost";
 function switchTab(tab){
   activeTab=tab;
@@ -473,9 +465,6 @@ function switchTab(tab){
   $("cs-tab-tools").classList.toggle("cs-tab-active",tab==="tools");
 }
 
-// ── Speed filter buttons ──────────────────────────────────────────────────────
-// speedTypeFilter: null | 'constant' | 'variable'  (mutually exclusive)
-// speedLosFilter: true | false  (independent, stackable)
 let speedTypeFilter=null;
 let speedLosFilter=false;
 
@@ -485,7 +474,7 @@ function initSpeedButtons(){
   const btnLos=$("cs-speed-los");
   if(!btnConstant||!btnVariable||!btnLos)return;
 
-  // Constant / Variable — mutually exclusive toggle
+  
   [btnConstant,btnVariable].forEach(btn=>{
     btn.addEventListener("click",()=>{
       const key=btn.dataset.speed;
@@ -497,7 +486,7 @@ function initSpeedButtons(){
     });
   });
 
-  // LOS — 3-state: off → active (has LOS) → ruledout (no LOS) → off
+  
   btnLos.addEventListener("click",()=>{
     if(speedLosFilter===false)speedLosFilter="active";
     else if(speedLosFilter==="active")speedLosFilter="ruledout";
@@ -508,13 +497,12 @@ function initSpeedButtons(){
   });
 }
 
-// ── Linking side-panel ───────────────────────────────────────────────────────
 let linkingPanelOpen=false;
 function toggleLinkingPanel(){
   linkingPanelOpen=!linkingPanelOpen;
   $("cs-linking-tab-trigger").classList.toggle("cs-linking-open",linkingPanelOpen);
   $("cs-sidebar").classList.toggle("linking-open",linkingPanelOpen);
-  // CSS handles visibility/max-width transitions — no display toggling needed
+  
 }
 
 let csIsOpen=false;
@@ -532,7 +520,6 @@ function closeCheatSheet(){
   el.addEventListener("transitionend",()=>{if(!csIsOpen)el.classList.add("hidden");},{once:true});
 }
 
-// ── Betting cards ─────────────────────────────────────────────────────────────
 function renderBettingCards(){
   const main=$("main");main.innerHTML="";
   activeWheels.forEach((typeKey,i)=>{
@@ -592,7 +579,6 @@ function resetBettingUI(){
   const mb=$("my-bets-display");if(mb)mb.innerHTML=`<p class="my-bets-empty">No bets placed yet.</p>`;
 }
 
-// ── Event wiring ──────────────────────────────────────────────────────────────
 $("settings-toggle").addEventListener("click",()=>$("settings-panel").classList.toggle("hidden"));
 
 $("settings-name-save").addEventListener("click",async()=>{
@@ -718,12 +704,12 @@ $("cs-linking-tab-trigger").addEventListener("click",()=>toggleLinkingPanel());
 async function doEndRound(){
   try{
     if(!isAdmin||!currentLobbyCode)return;
-    // Reset evidence in Firestore at same time as phase change
-    // so all clients (and their overlays) get a clean state
+    
+    
     const resetEvidence={};
     EVIDENCE.forEach(e=>{resetEvidence[`evidence.${e.id}`]="none";});
     await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"results",...resetEvidence});
-    // Also push reset to our own overlay immediately
+    
     pushResetToOverlay();
   }catch(e){console.error("endRound:",e);}
 }
@@ -802,7 +788,6 @@ $("desktop-link-btn").addEventListener("click",()=>{
   connectDesktopLink(code);
 });
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
 signInAnonymously(auth).catch(e=>alert("Auth failed: "+e.message));
 onAuthStateChanged(auth,async user=>{
   if(!user)return;currentUid=user.uid;
@@ -821,12 +806,11 @@ onAuthStateChanged(auth,async user=>{
   }catch(e){alert("Startup error: "+e.message);}
 });
 
-// ── Leave / cleanup ───────────────────────────────────────────────────────────
 async function doLeave(wasKicked){
   if(!currentLobbyCode)return;
   const code=currentLobbyCode;cleanupListeners();currentLobbyCode=null;isAdmin=false;lastPayoutRound=-1;
   closeCheatSheet();ghostVotes={};localDeaths={};myDied=false;
-  // Close linking panel
+  
   linkingPanelOpen=false;
   $("cs-linking-tab-trigger").classList.remove("cs-linking-open");
   $("cs-sidebar").classList.remove("linking-open");
@@ -850,12 +834,11 @@ async function removePlayerFromLobby(uid,code){
   }
 }
 
-// ── Enter lobby ───────────────────────────────────────────────────────────────
 function enterLobby(code){
   currentLobbyCode=code;lastPayoutRound=-1;ghostVotes={};localDeaths={};myDied=false;
   $("screen-landing").classList.add("hidden");$("screen-lobby").classList.remove("hidden");
   $("lobby-code-display").textContent=`Lobby: ${code}`;
-  // "Code:" prefix in cheat sheet topbar
+  
   $("cs-topbar-lobby-code").textContent=`Code: ${code}`;
   buildCheatSheet();initSpeedButtons();setupPresence(code);
   if(unsubLobby)unsubLobby();
@@ -874,7 +857,6 @@ function enterLobby(code){
   },e=>console.error("bets snapshot:",e));
 }
 
-// ── Presence ──────────────────────────────────────────────────────────────────
 function setupPresence(code){
   const myRef=ref(rtdb,`presence/${code}/${currentUid}`);set(myRef,{online:true});onDisconnect(myRef).remove();
   if(unsubPresence)unsubPresence();
@@ -888,7 +870,6 @@ function setupPresence(code){
   });
 }
 
-// ── Lobby update handler ──────────────────────────────────────────────────────
 function handleLobbyUpdate(data){
   $("lobby-round-display").textContent=`Round ${data.round}`;
   isAdmin=data.adminUid===currentUid;
@@ -905,7 +886,7 @@ function handleLobbyUpdate(data){
   }
   updateDeathBanner(data.deaths||{});
   renderCheatSheet();
-  // Push latest evidence state to this player's overlay so it stays in sync with other players
+  
   pushEvidenceToOverlay();
 
   const list=$("players-list");list.innerHTML="";
@@ -948,7 +929,6 @@ function handleLobbyUpdate(data){
   }
 }
 
-// ── Payout ────────────────────────────────────────────────────────────────────
 async function applyMyPayoutAndShowPopup(data){
   try{
     const myAmount=(data.payouts||{})[currentUid]||0;
@@ -991,11 +971,11 @@ function calculatePayouts(betsSnap,results){
   }
   if(totalWin===0)return{};
   const losingPool=totalPool-totalWin;
-  // Dynamic house bonus based on number of bettors:
-  //   1 player  → 2.0x bonus (solo needs a reason to play)
-  //   2 players → 0.5x
-  //   3 players → 0.3x
-  //   4+ players→ 0.15x (losing pool is reward enough)
+  
+  
+  
+  
+  
   const numBettors=Object.keys(allBets).length;
   const houseBonusRate=numBettors<=1?2.0:numBettors===2?0.5:numBettors===3?0.3:0.15;
   const payouts={};
@@ -1007,13 +987,11 @@ function calculatePayouts(betsSnap,results){
   return payouts;
 }
 
-// ── Desktop link ──────────────────────────────────────────────────────────────
-// Push full evidence state to overlay (called after Firestore sync so all players' overlays stay in sync)
 function pushEvidenceToOverlay(){
   if(!desktopWS||desktopWS.readyState!==WebSocket.OPEN)return;
   desktopWS.send(JSON.stringify({type:"evidence-full",state:localEvidence}));
 }
-// Push a reset signal to the overlay
+
 function pushResetToOverlay(){
   if(!desktopWS||desktopWS.readyState!==WebSocket.OPEN)return;
   desktopWS.send(JSON.stringify({type:"evidence-reset"}));
@@ -1028,9 +1006,9 @@ function connectDesktopLink(code){
     try{
       const msg=JSON.parse(ev.data);
       if(msg.type==="connected"){setLinkStatus("connected");if(msg.state){Object.entries(msg.state).forEach(([id,st])=>{localEvidence[id]=st;});renderCheatSheet();}}
-      // Overlay pushed an evidence change -> sync to Firestore so other players see it too
+      
       else if(msg.type==="evidence-update"){localEvidence[msg.id]=msg.state;renderCheatSheet();if(currentLobbyCode)updateDoc(doc(db,"lobbies",currentLobbyCode),{[`evidence.${msg.id}`]:msg.state}).catch(e=>console.error(e));}
-      // Overlay reset -> sync to Firestore
+      
       else if(msg.type==="evidence-reset"){EVIDENCE.forEach(e=>{localEvidence[e.id]="none";});renderCheatSheet();if(currentLobbyCode){const reset={};EVIDENCE.forEach(e=>{reset[`evidence.${e.id}`]="none";});updateDoc(doc(db,"lobbies",currentLobbyCode),reset).catch(e=>console.error(e));}}
     }catch(_){}
   });
@@ -1043,7 +1021,6 @@ function setLinkStatus(status){
   const s=map[status]||map.idle;el.textContent=s.text;el.style.color=s.color;dot.style.background=s.color;
 }
 
-// ── Payout popup ──────────────────────────────────────────────────────────────
 function showPayoutPopup(data){
   const results=data.results||{},payouts=data.payouts||{},players=data.players||{},wheels=data.wheels||activeWheels;
   $("popup-results-display").innerHTML=WHEEL_KEYS.map((k,i)=>{

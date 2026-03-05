@@ -18,7 +18,6 @@ p { font-family: 'Spectral SC', serif; color: whitesmoke; margin: 0; }
 .btn-danger-sm { font-family: 'Spectral SC', serif; color: #e06c6c; background-color: transparent; border: #5a1f1f solid 2px; border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 12px; transition: all 0.2s; }
 .btn-danger-sm:hover { background-color: #3d2020; }
 
-/* Settings */
 #user-settings-card { position: fixed; top: 16px; right: 16px; z-index: 300; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 #settings-toggle { background: #2f3233; border: #131414 solid 2px; border-radius: 8px; color: whitesmoke; font-size: 18px; width: 38px; height: 38px; cursor: pointer; transition: border-color 0.2s; display: flex; align-items: center; justify-content: center; }
 #settings-toggle:hover { border-color: #777; }
@@ -27,7 +26,6 @@ p { font-family: 'Spectral SC', serif; color: whitesmoke; margin: 0; }
 #settings-name-input:focus, #settings-lobby-code-input:focus, #currency-select:focus { border-color: #777; }
 #settings-msg { color: #7fd67f; font-size: 12px; min-height: 16px; text-align: center; }
 
-/* Landing */
 #screen-landing { max-width: 520px; margin: 0 auto; }
 #landing-card { background-color: #2f3233; border: #131414 solid 3px; border-radius: 14px; padding: 30px; display: flex; flex-direction: column; gap: 16px; }
 #display-name-input, #join-code-input { font-family: 'Spectral SC', serif; font-size: 14px; background-color: #3C4142; color: whitesmoke; border: #131414 solid 2px; border-radius: 8px; padding: 10px 14px; outline: none; transition: border-color 0.2s; width: 100%; }
@@ -37,7 +35,6 @@ p { font-family: 'Spectral SC', serif; color: whitesmoke; margin: 0; }
 .landing-divider { width: 1px; background-color: #555; margin: 0 20px; }
 #landing-error { color: #e06c6c; font-size: 13px; min-height: 18px; text-align: center; }
 
-/* Lobby */
 #screen-lobby { max-width: 860px; margin: 0 auto; }
 #lobby-header { display: flex; justify-content: space-between; align-items: center; background-color: #2f3233; border: #131414 solid 3px; border-radius: 12px; padding: 14px 22px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
 #lobby-meta { display: flex; flex-direction: column; gap: 4px; }
@@ -46,7 +43,6 @@ p { font-family: 'Spectral SC', serif; color: whitesmoke; margin: 0; }
 #lobby-stats { display: flex; gap: 24px; align-items: center; }
 #points-display, #prize-pool-display { font-family: 'Spectral SC', serif; color: whitesmoke; font-size: 15px; }
 
-/* Players */
 #players-section { margin-bottom: 24px; text-align: center; }
 #players-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 8px; }
 .player-tag { font-family: 'Spectral SC', serif; font-size: 13px; color: whitesmoke; background-color: #2f3233; border: #131414 solid 2px; border-radius: 20px; padding: 5px 14px; display: flex; align-items: center; gap: 8px; }
@@ -54,7 +50,6 @@ p { font-family: 'Spectral SC', serif; color: whitesmoke; margin: 0; }
 .kick-btn { background: none; border: none; color: #e06c6c; cursor: pointer; font-size: 12px; padding: 0 2px; line-height: 1; opacity: 0.6; transition: opacity 0.15s; }
 .kick-btn:hover { opacity: 1; }
 
-/* Wheel cards */
 main { display: flex; gap: 20px; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
 .wheel-card { display: flex; flex-direction: column; align-items: center; gap: 10px; background-color: #2f3233; border: #131414 solid 3px; border-radius: 12px; padding: 20px 22px; min-width: 175px; flex: 1; max-width: 240px; }
 .wheel-label { font-family: 'Spectral SC', serif; color: #aaa; font-size: 12px; margin: 0; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -68,7 +63,6 @@ main { display: flex; gap: 20px; justify-content: center; align-items: flex-star
 .spin:hover { transform: scale(1.08); border-color: #555; }
 #bet-error { color: #e06c6c; font-size: 13px; min-height: 18px; margin-bottom: 8px; }
 
-/* My bets */
 #my-bets-section { max-width: 480px; margin: 24px auto 0; }
 #my-bets-section .section-label { text-align: center; margin-bottom: 10px; }
 #my-bets-display { display: flex; flex-direction: column; gap: 6px; }
@@ -78,7 +72,6 @@ main { display: flex; gap: 20px; justify-content: center; align-items: flex-star
 .my-bet-amount { color: #7fd67f; flex: 0 0 auto; }
 .my-bets-empty { color: #666; text-align: center; font-size: 13px; }
 
-/* Wheel config */
 #wheel-config-section { background: #2a2d2e; border: 1px solid #3a3d3e; border-radius: 12px; padding: 16px 20px; margin: 0 auto 20px; max-width: 480px; width: 100%; }
 #wheel-config-panel { display: flex; flex-direction: column; gap: 10px; }
 .wheel-config-row { display: flex; align-items: center; gap: 14px; }
@@ -87,7 +80,6 @@ main { display: flex; gap: 20px; justify-content: center; align-items: flex-star
 .wheel-type-select:focus { outline: none; border-color: #7fd67f; }
 .wheel-card-empty { opacity: 0.35; pointer-events: none; border: 2px dashed #444 !important; }
 
-/* Results */
 #outcome-selectors { display: flex; flex-direction: column; gap: 12px; max-width: 400px; margin: 0 auto; }
 .outcome-row { display: flex; align-items: center; gap: 14px; background-color: #2f3233; border: #131414 solid 2px; border-radius: 10px; padding: 12px 16px; }
 .outcome-label { font-family: 'Spectral SC', serif; color: #aaa; font-size: 13px; width: 100px; flex-shrink: 0; }
@@ -97,7 +89,6 @@ main { display: flex; gap: 20px; justify-content: center; align-items: flex-star
 #payout-action { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 24px; }
 #payout-action #payout-btn { width: auto; padding: 12px 32px; display: inline-block; }
 
-/* Payout popup */
 #payout-popup { position: fixed; inset: 0; background: rgba(0,0,0,0.65); display: flex; align-items: center; justify-content: center; z-index: 500; }
 #payout-popup-inner { background-color: #2f3233; border: #131414 solid 3px; border-radius: 16px; padding: 30px 36px; max-width: 400px; width: 90%; display: flex; flex-direction: column; align-items: center; gap: 16px; }
 .popup-title { font-family: 'Phasmophobia', sans-serif; font-size: 28px; color: whitesmoke; text-align: center; }
@@ -110,9 +101,6 @@ main { display: flex; gap: 20px; justify-content: center; align-items: flex-star
 .payout-amount { color: #7fd67f; }
 #popup-your-payout { font-family: 'Spectral SC', serif; font-size: 15px; font-weight: bold; text-align: center; border-top: 1px solid #444; padding-top: 12px; width: 100%; }
 
-/* ═══════════════════════════════════════════════
-   CHEAT SHEET FULLSCREEN OVERLAY
-═══════════════════════════════════════════════ */
 #cs-overlay {
   position: fixed;
   inset: 0;
@@ -125,10 +113,8 @@ main { display: flex; gap: 20px; justify-content: center; align-items: flex-star
 }
 #cs-overlay.cs-visible { transform: translateX(0); }
 
-/* Hide settings gear entirely while cheat sheet is open */
 body.cs-active #user-settings-card { display: none !important; }
 
-/* Top bar */
 #cs-topbar {
   background-color: #232628;
   border-bottom: 1px solid #3a3d3e;
@@ -158,7 +144,6 @@ body.cs-active #user-settings-card { display: none !important; }
   flex-shrink: 0;
 }
 
-/* Topbar spin-sized buttons */
 .cs-topbar-spin {
   font-family: 'Spectral SC', serif;
   padding: 15px 20px;
@@ -171,7 +156,6 @@ body.cs-active #user-settings-card { display: none !important; }
 }
 .cs-topbar-spin:hover { transform: scale(1.06); }
 
-/* Skull/death topbar button */
 .cs-death-topbar-btn {
   background: #2e1e1e;
   border-color: #5a2a2a !important;
@@ -180,7 +164,6 @@ body.cs-active #user-settings-card { display: none !important; }
 .cs-death-topbar-btn:hover { background: #3d2020; border-color: #7a3a3a !important; }
 .cs-death-topbar-btn.cs-death-active { background: #5a1f1f; border-color: #5a2a2a !important; color: #fff; }
 
-/* Save & Reset / Reset Evidence topbar buttons */
 .cs-action-topbar-btn {
   background: #2e1e1e;
   border-color: #e06c6c !important;
@@ -188,7 +171,6 @@ body.cs-active #user-settings-card { display: none !important; }
 }
 .cs-action-topbar-btn:hover { background: #3d2020; }
 
-/* Death notification banner */
 #cs-death-banner {
   background: #5a1f1f;
   border-bottom: 1px solid #e06c6c;
@@ -204,16 +186,14 @@ body.cs-active #user-settings-card { display: none !important; }
   text-align: center;
 }
 
-/* Body: left sidebar + ghost grid */
 #cs-body {
   display: flex;
   flex: 1;
   min-height: 0;
-  overflow: visible; /* sidebar's absolutely-positioned tongue must not be clipped */
+  overflow: visible; 
   position: relative;
 }
 
-/* LEFT SIDEBAR — fixed 190px, tongue is absolutely positioned outside */
 #cs-sidebar {
   position: relative;
   width: 190px;
@@ -221,14 +201,13 @@ body.cs-active #user-settings-card { display: none !important; }
   background-color: #232628;
   display: flex;
   flex-direction: column;
-  overflow: visible; /* allows tongue + panel to poke out to the right */
+  overflow: visible; 
   transition: width 0.28s cubic-bezier(0.4,0,0.2,1);
 }
 #cs-sidebar.linking-open {
-  width: 390px; /* 190 main + 22 tongue + 178 panel */
+  width: 390px; 
 }
 
-/* Main sidebar column — fills the 190px sidebar */
 #cs-sidebar-main {
   flex: 1;
   display: flex;
@@ -269,9 +248,6 @@ body.cs-active #user-settings-card { display: none !important; }
   gap: 8px;
 }
 
-/* LINKING — tongue lives at the right edge of #cs-sidebar-main (always 190px wide).
-   Uses max-width 0->150px for the slide so inner content stays at fixed width
-   without fighting the container. visibility replaces display:none to allow transitions. */
 #cs-linking-section {
   position: absolute;
   top: 0;
@@ -284,7 +260,6 @@ body.cs-active #user-settings-card { display: none !important; }
   pointer-events: none;
 }
 
-/* Tongue: 22px vertical tab, always visible */
 .cs-linking-trigger {
   width: 22px;
   flex-shrink: 0;
@@ -311,8 +286,6 @@ body.cs-active #user-settings-card { display: none !important; }
 .cs-linking-trigger:hover { color: #ccc; background: #2a2d2e; }
 .cs-linking-trigger.cs-linking-open { color: #7fd67f; background: #1a2a1a; }
 
-/* Panel: fixed width 150px, but max-width collapses it to 0.
-   visibility replaces display:none so CSS transitions aren't killed. */
 .cs-linking-body {
   width: 178px;
   max-width: 0;
@@ -350,10 +323,9 @@ body.cs-active #user-settings-card { display: none !important; }
   gap: 10px;
   box-sizing: border-box;
 }
-/* .hidden no longer needed on linking panel but keep rule harmless */
+
 .cs-linking-body.hidden { visibility: hidden !important; max-width: 0 !important; }
 
-/* Evidence panel */
 #cs-evidence-panel {
   display: flex;
   flex-direction: column;
@@ -377,7 +349,7 @@ body.cs-active #user-settings-card { display: none !important; }
 .cs-evi-confirmed { background: #1e2e1e !important; border-color: #7fd67f !important; color: #7fd67f !important; }
 .cs-evi-ruled-out { background: #2e1e1e !important; border-color: #e06c6c !important; color: #e06c6c !important; text-decoration: line-through; }
 .cs-evi-impossible { opacity: 0.3; }
-/* Ghost speed filter buttons — styled like evidence buttons */
+
 #cs-speed-box {
   display: flex;
   flex-direction: column;
@@ -401,19 +373,19 @@ body.cs-active #user-settings-card { display: none !important; }
   width: 100%;
 }
 .cs-speed-btn:hover { border-color: #888; color: #fff; }
-/* Active: Constant/Variable — green like confirmed evidence */
+
 .cs-speed-btn.cs-speed-active {
   background: #1e2e1e !important;
   border-color: #7fd67f !important;
   color: #7fd67f !important;
 }
-/* LOS button — yellow when active (has LOS) */
+
 .cs-speed-btn-los.cs-speed-active {
   background: #2e2a10 !important;
   border-color: #f0c040 !important;
   color: #f0c040 !important;
 }
-/* LOS button — red when ruled out (no LOS) */
+
 .cs-speed-btn-los.cs-speed-ruledout {
   background: #2e1e1e !important;
   border-color: #e06c6c !important;
@@ -421,7 +393,6 @@ body.cs-active #user-settings-card { display: none !important; }
   text-decoration: line-through;
 }
 
-/* Linking body items */
 .cs-linking-body-inner #link-status-row,
 .cs-linking-body-inner .btn-primary,
 .cs-linking-body-inner #overlay-download-btn,
@@ -479,23 +450,21 @@ body.cs-active #user-settings-card { display: none !important; }
 }
 #overlay-download-btn:hover { border-color: #7fd67f; color: #7fd67f; }
 
-/* Ghost grid */
 #cs-main {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 16px 16px 16px 24px;
-  min-height: 0; /* needed for flex child to scroll */
+  min-height: 0; 
 }
 #cs-ghost-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   gap: 12px;
-  /* Uniform row height accounts for The Mimic's 4th evidence tag */
+  
   grid-auto-rows: 1fr;
 }
 
-/* Ghost card */
 .cs-ghost-card {
   background: #2f3233;
   border: 1px solid #3a3d3e;
@@ -503,7 +472,7 @@ body.cs-active #user-settings-card { display: none !important; }
   padding: 14px;
   transition: opacity 0.2s, border-color 0.15s;
   position: relative;
-  /* Fill the grid row */
+  
   display: flex;
   align-items: stretch;
 }
@@ -511,12 +480,10 @@ body.cs-active #user-settings-card { display: none !important; }
 .cs-ghost-card.cs-ghost-hidden { display: none; }
 .cs-ghost-card.cs-ghost-speed-hidden { display: none; }
 
-/* Ghost card voted states */
 .cs-ghost-card.ghost-confirmed-card { border-color: #7fd67f; background: #1e2e1e; }
 .cs-ghost-card.ghost-ruledout-card { opacity: 0.4; border-color: #e06c6c; }
 .cs-ghost-card.ghost-guess-card { border-color: #f0c040; }
 
-/* Inner layout: left content + right action buttons */
 .cs-ghost-inner {
   display: flex;
   flex-direction: row;
@@ -525,7 +492,6 @@ body.cs-active #user-settings-card { display: none !important; }
   width: 100%;
 }
 
-/* Left: name + evidence */
 .cs-ghost-left {
   flex: 1;
   display: flex;
@@ -541,7 +507,6 @@ body.cs-active #user-settings-card { display: none !important; }
   color: #fff;
 }
 
-/* Right: vertical action buttons */
 .cs-ghost-actions {
   display: flex;
   flex-direction: column;
@@ -566,7 +531,7 @@ body.cs-active #user-settings-card { display: none !important; }
   flex-shrink: 0;
 }
 .cs-ghost-action-btn:hover { border-color: #888; color: #fff; }
-/* Active states */
+
 .ghost-action-confirm.active { background: #1e2e1e; border-color: #7fd67f; color: #7fd67f; }
 .ghost-action-ruledout.active { background: #2e1e1e; border-color: #e06c6c; color: #e06c6c; }
 .ghost-action-guess.active { background: #2e2a10; border-color: #f0c040; color: #f0c040; }
@@ -578,7 +543,6 @@ body.cs-active #user-settings-card { display: none !important; }
   gap: 4px;
 }
 
-/* Speed info on ghost card */
 .cs-ghost-speed {
   display: flex;
   flex-direction: column;
@@ -636,7 +600,6 @@ body.cs-active #user-settings-card { display: none !important; }
 .cs-evi-tag-writing  { border-left: 3px solid #e07060; }
 .cs-evi-tag-spiritbox{ border-left: 3px solid #e06cb0; }
 
-/* Tell box on ghost card */
 .cs-ghost-tell {
   flex: 1;
   min-width: 120px;
@@ -655,7 +618,6 @@ body.cs-active #user-settings-card { display: none !important; }
   white-space: pre-wrap;
 }
 
-/* Hunt sanity on ghost card */
 .cs-ghost-hunt-sanity {
   display: flex;
   flex-direction: column;
