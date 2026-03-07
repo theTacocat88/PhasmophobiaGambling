@@ -472,9 +472,9 @@ body.cs-active #user-settings-card { display: none !important; }
   padding: 14px;
   transition: opacity 0.2s, border-color 0.15s;
   position: relative;
-  
   display: flex;
   align-items: stretch;
+  overflow: hidden;
 }
 .cs-ghost-card:hover { border-color: #555; }
 .cs-ghost-card.cs-ghost-hidden { display: none; }
@@ -490,6 +490,8 @@ body.cs-active #user-settings-card { display: none !important; }
   align-items: stretch;
   gap: 10px;
   width: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .cs-ghost-left {
@@ -601,9 +603,8 @@ body.cs-active #user-settings-card { display: none !important; }
 .cs-evi-tag-spiritbox{ border-left: 3px solid #e06cb0; }
 
 .cs-ghost-tell {
-  flex: 1;
-  min-width: 120px;
-  max-width: 220px;
+  flex: 0 0 180px;
+  min-height: 0;
   align-self: stretch;
   background: #1e2122;
   border: 1px solid #3a3d3e;
