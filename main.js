@@ -149,7 +149,7 @@ const GHOSTS=[
   {name:"Obambo",evidence:["emf","writing","dots"]},
   {name:"Oni",evidence:["emf","freezing","dots"]},
   {name:"Onryo",evidence:["orb","freezing","spiritbox"]},
-  {name:"Phantom",evidence:["uv","orb","spiritbox"]},
+  {name:"Phantom",evidence:["uv","dots","spiritbox"]},
   {name:"Poltergeist",evidence:["uv","writing","spiritbox"]},
   {name:"Raiju",evidence:["emf","orb","dots"]},
   {name:"Revenant",evidence:["orb","writing","freezing"]},
