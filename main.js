@@ -424,11 +424,12 @@ async function saveAndReset(){
   });
   localDeaths={};
   speedTypeFilter=null;speedLosFilter=false;
-  $("cs-speed-constant")?.classList.remove("cs-speed-active");
-  $("cs-speed-variable")?.classList.remove("cs-speed-active");
-  $("cs-speed-los")?.classList.remove("cs-speed-active","cs-speed-ruledout");
+  applySpeedUI();
   renderCheatSheet();
   pushResetToOverlay();
+  pushSpeedToOverlay();
+  reset["speedFilter.type"]=null;
+  reset["speedFilter.los"]=false;
   try{await updateDoc(doc(db,"lobbies",currentLobbyCode),reset);}
   catch(e){console.error("saveAndReset:",e);}
 }
@@ -437,11 +438,12 @@ async function resetCheatSheet(){
   if(!currentLobbyCode)return;
   const reset={};EVIDENCE.forEach(e=>{reset[`evidence.${e.id}`]="none";localEvidence[e.id]="none";});
   speedTypeFilter=null;speedLosFilter=false;
-  $("cs-speed-constant")?.classList.remove("cs-speed-active");
-  $("cs-speed-variable")?.classList.remove("cs-speed-active");
-  $("cs-speed-los")?.classList.remove("cs-speed-active","cs-speed-ruledout");
+  applySpeedUI();
   renderCheatSheet();
   pushResetToOverlay();
+  pushSpeedToOverlay();
+  reset["speedFilter.type"]=null;
+  reset["speedFilter.los"]=false;
   try{await updateDoc(doc(db,"lobbies",currentLobbyCode),reset);}
   catch(e){console.error("resetCheatSheet:",e);}
 }
@@ -481,32 +483,49 @@ function switchTab(tab){
 let speedTypeFilter=null;
 let speedLosFilter=false;
 
+async function pushSpeedToFirestore(){
+  if(!currentLobbyCode)return;
+  try{await updateDoc(doc(db,"lobbies",currentLobbyCode),{"speedFilter.type":speedTypeFilter,"speedFilter.los":speedLosFilter});}
+  catch(e){console.error("pushSpeedToFirestore:",e);}
+}
+
+function pushSpeedToOverlay(){
+  if(!desktopWS||desktopWS.readyState!==WebSocket.OPEN)return;
+  desktopWS.send(JSON.stringify({type:"speed-full",speedType:speedTypeFilter,speedLos:speedLosFilter}));
+}
+
+function applySpeedUI(){
+  $("cs-speed-constant")?.classList.toggle("cs-speed-active",speedTypeFilter==="constant");
+  $("cs-speed-variable")?.classList.toggle("cs-speed-active",speedTypeFilter==="variable");
+  $("cs-speed-los")?.classList.toggle("cs-speed-active",speedLosFilter==="active");
+  $("cs-speed-los")?.classList.toggle("cs-speed-ruledout",speedLosFilter==="ruledout");
+}
+
 function initSpeedButtons(){
   const btnConstant=$("cs-speed-constant");
   const btnVariable=$("cs-speed-variable");
   const btnLos=$("cs-speed-los");
   if(!btnConstant||!btnVariable||!btnLos)return;
 
-  
   [btnConstant,btnVariable].forEach(btn=>{
     btn.addEventListener("click",()=>{
       const key=btn.dataset.speed;
-      if(speedTypeFilter===key){speedTypeFilter=null;}
-      else{speedTypeFilter=key;}
-      btnConstant.classList.toggle("cs-speed-active",speedTypeFilter==="constant");
-      btnVariable.classList.toggle("cs-speed-active",speedTypeFilter==="variable");
+      speedTypeFilter=speedTypeFilter===key?null:key;
+      applySpeedUI();
       renderCheatSheet();
+      pushSpeedToFirestore();
+      pushSpeedToOverlay();
     });
   });
 
-  
   btnLos.addEventListener("click",()=>{
     if(speedLosFilter===false)speedLosFilter="active";
     else if(speedLosFilter==="active")speedLosFilter="ruledout";
     else speedLosFilter=false;
-    btnLos.classList.toggle("cs-speed-active",speedLosFilter==="active");
-    btnLos.classList.toggle("cs-speed-ruledout",speedLosFilter==="ruledout");
+    applySpeedUI();
     renderCheatSheet();
+    pushSpeedToFirestore();
+    pushSpeedToOverlay();
   });
 }
 
@@ -924,9 +943,19 @@ function handleLobbyUpdate(data){
     });
   }
   updateDeathBanner(data.deaths||{});
+
+  const sf=data.speedFilter||{};
+  const newSpeedType=sf.type??null;
+  const newSpeedLos=sf.los??false;
+  if(newSpeedType!==speedTypeFilter||newSpeedLos!==speedLosFilter){
+    speedTypeFilter=newSpeedType;
+    speedLosFilter=newSpeedLos;
+    applySpeedUI();
+  }
+
   renderCheatSheet();
-  
   pushEvidenceToOverlay();
+  pushSpeedToOverlay();
 
   const list=$("players-list");list.innerHTML="";
   for(const [uid,name] of Object.entries(currentPlayers)){
@@ -1048,7 +1077,8 @@ function connectDesktopLink(code){
       
       else if(msg.type==="evidence-update"){localEvidence[msg.id]=msg.state;renderCheatSheet();if(currentLobbyCode)updateDoc(doc(db,"lobbies",currentLobbyCode),{[`evidence.${msg.id}`]:msg.state}).catch(e=>console.error(e));}
       
-      else if(msg.type==="evidence-reset"){EVIDENCE.forEach(e=>{localEvidence[e.id]="none";});renderCheatSheet();if(currentLobbyCode){const reset={};EVIDENCE.forEach(e=>{reset[`evidence.${e.id}`]="none";});updateDoc(doc(db,"lobbies",currentLobbyCode),reset).catch(e=>console.error(e));}}
+      else if(msg.type==="evidence-reset"){EVIDENCE.forEach(e=>{localEvidence[e.id]="none";});renderCheatSheet();if(currentLobbyCode){const reset={};EVIDENCE.forEach(e=>{reset[`evidence.${e.id}`]="none";});updateDoc(doc(db,"lobbies",currentLobbyCode),reset).catch(e=>console.error(e));}} 
+      else if(msg.type==="speed-update"){speedTypeFilter=msg.speedType??null;speedLosFilter=msg.speedLos??false;applySpeedUI();renderCheatSheet();pushSpeedToFirestore();}
     }catch(_){}
   });
   desktopWS.addEventListener("close",()=>{desktopWS=null;setLinkStatus("disconnected");});
