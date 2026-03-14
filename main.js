@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged, deleteUser } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, getDocs, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getDatabase, ref, set, remove, onValue, onDisconnect } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 const firebaseConfig = {
@@ -12,8 +12,7 @@ const firebaseConfig = {
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app),rtdb=getDatabase(app);
 
 const GHOST_TELL={
-  Banshee:    `
-  Tells:
+  Banshee:    `Tells:
   - Can only be female (model/name)
   - 33% chance for 1/20 unique screams through parabolic microphone/sound recorder
   Ex.: Placeholder
@@ -25,9 +24,7 @@ const GHOST_TELL={
   More Sanity Info:
   - If target's sanity is 50% or lower even if outside - can hunt as early as 87% av. sanity, or as low as 12%
   `,
-  Dayan:      `
-  
-  `,
+  Dayan:      ``,
   Deogen:     ``,
   Demon:      ``,
   Gallu:      ``,
@@ -684,7 +681,8 @@ $("create-lobby-btn").addEventListener("click",async()=>{
     await setDoc(doc(db,"lobbies",code),{
       adminUid:currentUid,round:1,phase:"betting",results:null,payouts:null,
       players:{[currentUid]:name},wheels:["winlose","ghosttype","deaths"],
-      evidence:defaultEvidence,ghostVotes:defaultVotes,deaths:{}
+      evidence:defaultEvidence,ghostVotes:defaultVotes,deaths:{},
+      createdAt:serverTimestamp(),phaseChangedAt:serverTimestamp()
     });
     if(uSnap.exists()&&!uSnap.data().username){await updateDoc(doc(db,"users",currentUid),{username:name});$("settings-name-input").value=name;}
     enterLobby(code);
@@ -724,7 +722,7 @@ async function doEndRound(){
     
     const resetEvidence={};
     EVIDENCE.forEach(e=>{resetEvidence[`evidence.${e.id}`]="none";});
-    await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"results",...resetEvidence});
+    await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"results",...resetEvidence,phaseChangedAt:serverTimestamp()});
     
     pushResetToOverlay();
   }catch(e){console.error("endRound:",e);}
@@ -763,7 +761,7 @@ $("spin-btn").addEventListener("click",async()=>{
     if(!isAdmin||!currentLobbyCode)return;
     const resetEvidence={};EVIDENCE.forEach(e=>{resetEvidence[`evidence.${e.id}`]="none";});
     const resetVotes={};GHOSTS.forEach(g=>{resetVotes[`ghostVotes.${g.name.replace(/[\s']/g,"_")}`]="none";});
-    await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"playing",deaths:{},...resetEvidence,...resetVotes});
+    await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"playing",deaths:{},...resetEvidence,...resetVotes,phaseChangedAt:serverTimestamp()});
     myDied=false;$("cs-death-btn").classList.remove("cs-death-active");
   }catch(e){console.error("fixBets:",e);alert("Error: "+e.message);}
 });
@@ -779,7 +777,7 @@ $("payout-btn").addEventListener("click",async()=>{
     const payoutRecord=calculatePayouts(betsSnap,results);
     const batch=writeBatch(db);betsSnap.forEach(b=>batch.delete(b.ref));await batch.commit();
     const lobbySnap=await getDoc(doc(db,"lobbies",currentLobbyCode));if(!lobbySnap.exists())return;
-    await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"payout_done",results,payouts:payoutRecord,round:lobbySnap.data().round});
+    await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"payout_done",results,payouts:payoutRecord,round:lobbySnap.data().round,phaseChangedAt:serverTimestamp()});
     for(let i=1;i<=3;i++){const el=$(`outcome-${i}`);if(el)el.value="";}
   }catch(e){errEl.textContent="Error: "+e.message;console.error("payout:",e);}
 });
@@ -793,7 +791,7 @@ $("popup-close-btn").addEventListener("click",async()=>{
     const snap=await getDoc(doc(db,"lobbies",currentLobbyCode));
     if(snap.exists()&&snap.data().phase==="payout_done"){
       const defaultVotes={};GHOSTS.forEach(g=>{defaultVotes[`ghostVotes.${g.name.replace(/[\s']/g,"_")}`]="none";});
-      await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"betting",results:null,payouts:null,round:snap.data().round+1,deaths:{},...defaultVotes});
+      await updateDoc(doc(db,"lobbies",currentLobbyCode),{phase:"betting",results:null,payouts:null,round:snap.data().round+1,deaths:{},...defaultVotes,phaseChangedAt:serverTimestamp()});
     }
   }catch(e){console.error("popupClose:",e);}
 });
@@ -886,12 +884,37 @@ function setupPresence(code){
   });
 }
 
+async function deleteStaleLobby(code){
+  try{
+    const betsSnap=await getDocs(collection(db,"lobbies",code,"bets"));
+    const batch=writeBatch(db);
+    betsSnap.forEach(b=>batch.delete(b.ref));
+    batch.delete(doc(db,"lobbies",code));
+    await batch.commit();
+    await remove(ref(rtdb,`presence/${code}`));
+  }catch(e){console.error("deleteStaleLobby:",e);}
+}
+
 function handleLobbyUpdate(data){
   $("lobby-round-display").textContent=`Round ${data.round}`;
   isAdmin=data.adminUid===currentUid;
   activeWheels=data.wheels||["winlose","ghosttype","deaths"];
   currentPlayers=data.players||{};
   if(currentLobbyCode&&!currentPlayers[currentUid]){doLeave(true);return;}
+
+  const now=Date.now();
+  const createdAt=data.createdAt?.toMillis?.();
+  const phaseChangedAt=data.phaseChangedAt?.toMillis?.();
+  const lobbyTooOld=createdAt&&(now-createdAt)>24*60*60*1000;
+  const phaseStale=phaseChangedAt&&(now-phaseChangedAt)>60*60*1000;
+  if(lobbyTooOld||phaseStale){
+    const code=currentLobbyCode;
+    if(isAdmin)deleteStaleLobby(code);
+    doLeave(false);
+    const err=$("landing-error");err.style.color="#aaa";
+    err.textContent=lobbyTooOld?"Lobby expired after 24 hours.":"Lobby expired due to inactivity.";
+    return;
+  }
 
   if(data.evidence){EVIDENCE.forEach(e=>{localEvidence[e.id]=data.evidence[e.id]||"none";});}
   if(data.ghostVotes){
