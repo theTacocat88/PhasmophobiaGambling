@@ -461,8 +461,6 @@ body.cs-active #user-settings-card { display: none !important; }
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   gap: 12px;
-  
-  grid-auto-rows: 1fr;
 }
 
 .cs-ghost-card {
@@ -490,8 +488,6 @@ body.cs-active #user-settings-card { display: none !important; }
   align-items: stretch;
   gap: 10px;
   width: 100%;
-  min-height: 0;
-  overflow: hidden;
 }
 
 .cs-ghost-left {
@@ -602,10 +598,14 @@ body.cs-active #user-settings-card { display: none !important; }
 .cs-evi-tag-writing  { border-left: 3px solid #e07060; }
 .cs-evi-tag-spiritbox{ border-left: 3px solid #e06cb0; }
 
-.cs-ghost-tell {
+.cs-ghost-tell-wrap {
   flex: 0 0 180px;
-  min-height: 0;
+  position: relative;
   align-self: stretch;
+}
+.cs-ghost-tell {
+  position: absolute;
+  inset: 0;
   background: #1e2122;
   border: 1px solid #3a3d3e;
   border-radius: 8px;

@@ -275,10 +275,13 @@ function buildCheatSheet(){
     
     const tellText=GHOST_TELL[ghost.name];
     if(tellText){
+      const tellWrap=document.createElement("div");
+      tellWrap.className="cs-ghost-tell-wrap";
       const tell=document.createElement("div");
       tell.className="cs-ghost-tell";
       tell.textContent=tellText;
-      inner.appendChild(tell);
+      tellWrap.appendChild(tell);
+      inner.appendChild(tellWrap);
     }
 
     
