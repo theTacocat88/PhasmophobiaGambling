@@ -22,8 +22,7 @@ const GHOST_TELL={
   Abilities:
   - 66% chance to stalk/roam to target w/o EMF reading (except between floors, or if target outside)
   More Sanity Info:
-  - If target's sanity is 50% or lower even if outside - can hunt as early as 87% av. sanity, or as low as 12%
-  `,
+  - If target's sanity is 50% or lower even if outside - can hunt as early as 87% av. sanity, or as low as 12%`,
   Dayan:      ``,
   Deogen:     ``,
   Demon:      ``,
