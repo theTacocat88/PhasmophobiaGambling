@@ -135,6 +135,22 @@ const WHEEL_DEFS={
   cursedobject:{label:"Cursed Object",options:["Music Box","Ouija Board","Summoning Circle","Voodoo Doll","Monkey's Paw","Tarot Cards","Haunted Mirror","None"]},
 };
 const WHEEL_KEYS=["wheel1","wheel2","wheel3"];
+const DIFFICULTY_DEFS={
+  amateur:      {label:"Amateur",          evidenceCount:3, noRuleOut:false},
+  intermediate: {label:"Intermediate",     evidenceCount:3, noRuleOut:false},
+  professional: {label:"Professional",     evidenceCount:3, noRuleOut:false},
+  nightmare:    {label:"Nightmare",        evidenceCount:2, noRuleOut:true},
+  insanity:     {label:"Insanity",         evidenceCount:1, noRuleOut:true},
+  apocalypse:   {label:"Apocalypse III",   evidenceCount:0, noRuleOut:true, orbConfirmsMinic:true},
+  custom:       {label:"Custom",           evidenceCount:null, noRuleOut:null},
+};
+function getDifficultyRules(diff){
+  if(diff.preset==="custom"){
+    const ec=Number(diff.customEvidence??3);
+    return {evidenceCount:ec, noRuleOut:ec<3, orbConfirmsMinic:false};
+  }
+  return DIFFICULTY_DEFS[diff.preset]||DIFFICULTY_DEFS.professional;
+}
 
 const EVIDENCE=[
   {id:"emf",label:"EMF 5"},
@@ -183,6 +199,7 @@ EVIDENCE.forEach(e=>{localEvidence[e.id]="none";});
 let ghostVotes={};
 let localDeaths={};
 let myDied=false;
+let currentDifficulty={preset:"professional",customEvidence:3,customHunt:"medium"};
 
 const $=id=>document.getElementById(id);
 function setPointsDisplay(pts){$("points-display").textContent=`${currencyLabel}: ${pts}`;}
@@ -336,11 +353,15 @@ function buildCheatSheet(){
 function renderCheatSheet(){
   const confirmed=Object.entries(localEvidence).filter(([,v])=>v==="confirmed").map(([k])=>k);
   const ruledOut=Object.entries(localEvidence).filter(([,v])=>v==="ruled_out").map(([k])=>k);
+  const rules=getDifficultyRules(currentDifficulty);
 
   function ghostMatchesFilter(ghost){
     const effectiveEvidence=ghost.mimicExtra?[...ghost.evidence,...ghost.mimicExtra]:ghost.evidence;
     const hasAllConfirmed=confirmed.every(e=>effectiveEvidence.includes(e));
-    const hasNoRuledOut=ruledOut.every(e=>!effectiveEvidence.includes(e));
+    const hasNoRuledOut=rules.noRuleOut?true:ruledOut.every(e=>!effectiveEvidence.includes(e));
+    if(rules.orbConfirmsMinic&&localEvidence["orb"]==="confirmed"){
+      return ghost.name==="The Mimic";
+    }
     return hasAllConfirmed&&hasNoRuledOut;
   }
 
@@ -405,7 +426,9 @@ function renderCheatSheet(){
 
 async function cycleEvidence(id){
   if(!currentLobbyCode)return;
-  const next=localEvidence[id]==="none"?"confirmed":localEvidence[id]==="confirmed"?"ruled_out":"none";
+  const rules=getDifficultyRules(currentDifficulty);
+  const cur=localEvidence[id];
+  const next=cur==="none"?"confirmed":cur==="confirmed"?(rules.noRuleOut?"none":"ruled_out"):"none";
   localEvidence[id]=next;renderCheatSheet();
   try{await updateDoc(doc(db,"lobbies",currentLobbyCode),{[`evidence.${id}`]:next});}
   catch(e){console.error("cycleEvidence:",e);}
@@ -567,6 +590,50 @@ function closeCheatSheet(){
   el.addEventListener("transitionend",()=>{if(!csIsOpen)el.classList.add("hidden");},{once:true});
 }
 
+function renderDifficultySection(diff){
+  const section=$("difficulty-section");
+  const sel=$("difficulty-select");
+  const customOpts=$("difficulty-custom-opts");
+  const display=$("difficulty-display");
+  if(!section||!sel)return;
+  if(isAdmin){
+    section.classList.remove("hidden");
+    sel.value=diff.preset||"professional";
+    customOpts?.classList.toggle("hidden",diff.preset!=="custom");
+    if(diff.preset==="custom"){
+      const ec=$("custom-evidence-count");
+      const ch=$("custom-hunt-sanity");
+      if(ec)ec.value=String(diff.customEvidence??3);
+      if(ch)ch.value=diff.customHunt||"medium";
+    }
+    if(display){
+      const rules=getDifficultyRules(diff);
+      const parts=[];
+      if(rules.evidenceCount!==null)parts.push(`${rules.evidenceCount} evidence`);
+      if(rules.noRuleOut)parts.push("no rule-out");
+      if(rules.orbConfirmsMinic)parts.push("orb \u2192 Mimic");
+      display.textContent=parts.length?parts.join(" \u00b7 "):"";
+    }
+  } else {
+    section.classList.remove("hidden");
+    if(sel)sel.disabled=true;
+    if(customOpts)customOpts.classList.add("hidden");
+    const rules=getDifficultyRules(diff);
+    const def=DIFFICULTY_DEFS[diff.preset]||{label:"Professional"};
+    const parts=[def.label];
+    if(rules.noRuleOut)parts.push("no rule-out");
+    if(rules.orbConfirmsMinic)parts.push("orb \u2192 Mimic");
+    if(display)display.textContent=parts.join(" \u00b7 ");
+    if(sel)sel.disabled=false;
+  }
+}
+
+async function saveDifficulty(){
+  if(!isAdmin||!currentLobbyCode)return;
+  try{await updateDoc(doc(db,"lobbies",currentLobbyCode),{difficulty:currentDifficulty});}
+  catch(e){console.error("saveDifficulty:",e);}
+}
+
 function renderBettingCards(){
   const main=$("main");main.innerHTML="";
   activeWheels.forEach((typeKey,i)=>{
@@ -716,7 +783,8 @@ $("create-lobby-btn").addEventListener("click",async()=>{
       adminUid:currentUid,round:1,phase:"betting",results:null,payouts:null,
       players:{[currentUid]:name},wheels:["winlose","ghosttype","deaths"],
       evidence:defaultEvidence,ghostVotes:defaultVotes,deaths:{},
-      createdAt:serverTimestamp(),phaseChangedAt:serverTimestamp()
+      createdAt:serverTimestamp(),phaseChangedAt:serverTimestamp(),
+      difficulty:{preset:"professional",customEvidence:3,customHunt:"medium"}
     });
     if(uSnap.exists()&&!uSnap.data().username){await updateDoc(doc(db,"users",currentUid),{username:name});$("settings-name-input").value=name;}
     enterLobby(code);
@@ -830,7 +898,33 @@ $("popup-close-btn").addEventListener("click",async()=>{
   }catch(e){console.error("popupClose:",e);}
 });
 
-$("desktop-link-btn").addEventListener("click",()=>{
+$("difficulty-select")?.addEventListener("change",()=>{
+  if(!isAdmin)return;
+  const preset=$("difficulty-select").value;
+  currentDifficulty.preset=preset;
+  const customOpts=$("difficulty-custom-opts");
+  customOpts?.classList.toggle("hidden",preset!=="custom");
+  renderDifficultySection(currentDifficulty);
+  saveDifficulty();
+});
+$("custom-evidence-count")?.addEventListener("change",()=>{
+  if(!isAdmin)return;
+  currentDifficulty.customEvidence=Number($("custom-evidence-count").value);
+  renderDifficultySection(currentDifficulty);
+  saveDifficulty();
+});
+$("custom-hunt-sanity")?.addEventListener("change",()=>{
+  if(!isAdmin)return;
+  currentDifficulty.customHunt=$("custom-hunt-sanity").value;
+  saveDifficulty();
+});
+
+$("cs-blood-moon-evidence")?.addEventListener("click",()=>{
+  const btn=$("cs-blood-moon-evidence");
+  btn?.classList.toggle("active");
+});
+
+$("desktop-link-btn")?.addEventListener("click",()=>{
   const code=$("desktop-link-input").value.trim();
   if(!code||code.length!==4){setLinkStatus("error");return;}
   connectDesktopLink(code);
@@ -950,6 +1044,7 @@ function handleLobbyUpdate(data){
     return;
   }
 
+  if(data.difficulty)currentDifficulty=data.difficulty;
   if(data.evidence){EVIDENCE.forEach(e=>{localEvidence[e.id]=data.evidence[e.id]||"none";});}
   if(data.ghostVotes){
     GHOSTS.forEach(g=>{
@@ -997,6 +1092,9 @@ function handleLobbyUpdate(data){
     renderBettingCards();if(isAdmin&&!data.wheelConfigDone)renderWheelConfig();
     $("spin-btn").style.display=isAdmin?"inline-block":"none";
     $("place-bets-btn").style.display="inline-block";
+    const diff=data.difficulty||{preset:"professional",customEvidence:3,customHunt:"medium"};
+    currentDifficulty=diff;
+    renderDifficultySection(diff);
   }else if(data.phase==="playing"){
     $("phase-playing").classList.remove("hidden");
     openCheatSheet();
@@ -1119,4 +1217,4 @@ function showPayoutPopup(data){
   msg.textContent=myAmt>0?`You won ${myAmt} ${currencyLabel}!`:"Better luck next round.";
   msg.style.color=myAmt>0?"#7fd67f":"#aaa";
   $("payout-popup").classList.remove("hidden");
-}
+}

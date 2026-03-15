@@ -4,7 +4,8 @@
   font-weight: normal; font-style: normal; font-display: swap;
 }
 * { box-sizing: border-box; }
-body { background-color: #3C4142; margin: 0; padding: 20px; }
+body { background-color: #3C4142; margin: 0; padding: 20px; scrollbar-width: none; }
+body::-webkit-scrollbar { display: none; }
 h1 { font-family: 'Phasmophobia', sans-serif; font-size: 40px; color: whitesmoke; text-align: center; margin-bottom: 30px; }
 p { font-family: 'Spectral SC', serif; color: whitesmoke; margin: 0; }
 .hidden { display: none !important; }
@@ -101,6 +102,73 @@ main { display: flex; gap: 20px; justify-content: center; align-items: flex-star
 .payout-amount { color: #7fd67f; }
 #popup-your-payout { font-family: 'Spectral SC', serif; font-size: 15px; font-weight: bold; text-align: center; border-top: 1px solid #444; padding-top: 12px; width: 100%; }
 
+#difficulty-section {
+  background: #2a2d2e;
+  border: 1px solid #3a3d3e;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin: 0 auto 20px;
+  max-width: 480px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#difficulty-section .section-label { margin-bottom: 0; }
+#difficulty-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+#difficulty-select {
+  flex: 1;
+  background: #1e2122;
+  color: whitesmoke;
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: 'Spectral SC', serif;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+#difficulty-select:focus { border-color: #7fd67f; }
+#difficulty-display {
+  font-family: 'Spectral SC', serif;
+  font-size: 12px;
+  color: #666;
+  text-align: center;
+}
+#difficulty-custom-opts {
+  display: flex;
+  gap: 10px;
+}
+#difficulty-custom-opts select {
+  flex: 1;
+  background: #1e2122;
+  color: whitesmoke;
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-family: 'Spectral SC', serif;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+#difficulty-custom-opts select:focus { border-color: #7fd67f; }
+#difficulty-custom-opts label {
+  font-family: 'Spectral SC', serif;
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
 #cs-overlay {
   position: fixed;
   inset: 0;
@@ -190,7 +258,7 @@ body.cs-active #user-settings-card { display: none !important; }
   display: flex;
   flex: 1;
   min-height: 0;
-  overflow: visible; 
+  overflow: visible;
   position: relative;
 }
 
@@ -201,11 +269,11 @@ body.cs-active #user-settings-card { display: none !important; }
   background-color: #232628;
   display: flex;
   flex-direction: column;
-  overflow: visible; 
+  overflow: visible;
   transition: width 0.28s cubic-bezier(0.4,0,0.2,1);
 }
 #cs-sidebar.linking-open {
-  width: 390px; 
+  width: 390px;
 }
 
 #cs-sidebar-main {
@@ -247,6 +315,33 @@ body.cs-active #user-settings-card { display: none !important; }
   flex-direction: column;
   gap: 8px;
 }
+
+.cs-sidebar-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.cs-sidebar-section-label {
+  font-family: 'Spectral SC', serif;
+  font-size: 10px;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.cs-blood-moon-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 13px;
+  color: #444;
+  line-height: 1;
+  transition: color 0.15s;
+  user-select: none;
+}
+.cs-blood-moon-btn:hover { color: #888; }
+.cs-blood-moon-btn.active { color: #c0392b; }
 
 #cs-linking-section {
   position: absolute;
@@ -354,9 +449,7 @@ body.cs-active #user-settings-card { display: none !important; }
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: 6px;
-  padding-top: 10px;
-  border-top: 1px solid #3a3d3e;
+  margin-top: 2px;
 }
 .cs-speed-btn {
   font-family: 'Spectral SC', serif;
@@ -454,12 +547,15 @@ body.cs-active #user-settings-card { display: none !important; }
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-width: none;
   padding: 16px 16px 16px 24px;
-  min-height: 0; 
+  min-height: 0;
 }
+#cs-main::-webkit-scrollbar { display: none; }
+
 #cs-ghost-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(550px, 1fr));
   gap: 12px;
 }
 

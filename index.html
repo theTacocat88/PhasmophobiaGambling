@@ -86,6 +86,41 @@
 
     <!-- BETTING PHASE -->
     <div id="phase-betting" class="hidden">
+
+        <!-- Difficulty selector (admin only) -->
+        <div id="difficulty-section" class="hidden">
+            <p class="section-label">Difficulty</p>
+            <div id="difficulty-row">
+                <select id="difficulty-select">
+                    <option value="amateur">Amateur</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="professional" selected>Professional</option>
+                    <option value="nightmare">Nightmare</option>
+                    <option value="insanity">Insanity</option>
+                    <option value="apocalypse">Apocalypse III</option>
+                    <option value="custom">Custom</option>
+                </select>
+            </div>
+            <div id="difficulty-custom-opts" class="hidden">
+                <label>Evidence
+                    <select id="custom-evidence-count">
+                        <option value="0">0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3" selected>3</option>
+                    </select>
+                </label>
+                <label>Hunt Sanity
+                    <select id="custom-hunt-sanity">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </label>
+            </div>
+            <p id="difficulty-display"></p>
+        </div>
+
         <div id="wheel-config-section" class="hidden">
             <p class="section-label" style="text-align:center; margin-bottom:8px;">Configure Wheels</p>
             <p style="text-align:center; color:#888; font-size:0.82em; margin-bottom:12px;">
@@ -166,17 +201,22 @@
 
         <!-- LEFT SIDEBAR -->
         <div id="cs-sidebar">
-            <!-- Main sidebar content (Ghost/Tools tabs + their panels) -->
             <div id="cs-sidebar-main">
-                <!-- Ghost / Tools tabs -->
                 <div id="cs-sidebar-tabs">
                     <button class="cs-tab-btn cs-tab-active" id="cs-tab-ghost" data-tab="ghost">Ghost</button>
                     <button class="cs-tab-btn" id="cs-tab-tools" data-tab="tools">Tools</button>
                 </div>
 
-                <!-- Ghost tab (evidence) -->
+                <!-- Ghost tab -->
                 <div id="cs-tab-content-ghost" class="cs-tab-content">
+                    <div class="cs-sidebar-section-header">
+                        <span class="cs-sidebar-section-label">Evidence</span>
+                        <button class="cs-blood-moon-btn" id="cs-blood-moon-evidence" title="Blood Moon (coming soon)">&#x1F311;</button>
+                    </div>
                     <div id="cs-evidence-panel"></div>
+                    <div class="cs-sidebar-section-header" style="margin-top:10px; padding-top:10px; border-top:1px solid #3a3d3e;">
+                        <span class="cs-sidebar-section-label">Speed</span>
+                    </div>
                     <div id="cs-speed-box">
                         <button class="cs-speed-btn" id="cs-speed-constant" data-speed="constant">Constant</button>
                         <button class="cs-speed-btn" id="cs-speed-variable" data-speed="variable">Variable / Range</button>
@@ -190,9 +230,8 @@
                 </div>
             </div>
 
-            <!-- Linking tab: vertical tongue on right edge + slide-in panel -->
+            <!-- Linking tab -->
             <div id="cs-linking-section">
-                <!-- Panel first so tongue is pushed rightward as it expands -->
                 <div id="cs-linking-panel-content" class="cs-linking-body">
                     <div class="cs-linking-body-inner">
                         <p class="section-label" style="margin-bottom:10px;">Overlay Linking</p>
@@ -206,7 +245,6 @@
                         <a id="overlay-download-btn" href="https://github.com/theTacocat88/PhasmophobiaGambling/releases/download/v2.0.0/PhasOverlay-Setup.exe" download>Download Overlay</a>
                     </div>
                 </div>
-                <!-- Tongue last so it always sits at the right edge -->
                 <button id="cs-linking-tab-trigger" class="cs-linking-trigger" title="Overlay Linking">&#x1F517;</button>
             </div>
         </div>
