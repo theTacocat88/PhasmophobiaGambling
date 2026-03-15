@@ -23,7 +23,14 @@ const GHOST_TELL={
   - 66% chance to stalk/roam to target w/o EMF reading (except between floors, or if target outside)
   More Sanity Info:
   - If target's sanity is 50% or lower even if outside - can hunt as early as 87% av. sanity, or as low as 12%`,
-  Dayan:      ``,
+  Dayan:      `Tells:
+  - Can only be female (model/name)
+  - Hunt speed/sanity threshold determined by player movement near the ghost
+  More Sanity Info:
+  - Threshold 65% when walking w/in 10m, 45% when standing still when w/in 10m, 50% otherwise
+  More Speed Info:
+  - 2.25m/s if walking w/in 10m, 1.2m/s if standing still w/in 10m, 1.7m/s if all are >10m away from the ghost
+  - Has LOS when >10m, and when within 10m LOS builds up but is not applied`,
   Deogen:     ``,
   Demon:      ``,
   Gallu:      ``,
@@ -83,7 +90,7 @@ const GHOST_HUNT_SANITY={
 const GHOST_SPEEDS={
   Banshee:    {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
   Dayan:      {type:"Variable",speeds:{"1.2m/s":"Unmoving player","1.7m/s":"No player within 10m","2.25m/s":"Nearest player walking"},los:true},
-  Deogen:     {type:"Variable",speeds:{"0.4m/s":"Within 3m of player","3m/s":">3m of player"},los:false},
+  Deogen:     {type:"Variable",speeds:{"0.4m/s":"Within 3m of player","3m/s":">3m of player"},los:true},
   Demon:      {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
   Gallu:      {type:"Variable",speeds:{"1.36m/s":"Weakened","1.7m/s":"Normal","1.96m/s":"Enraged"},los:true},
   Goryo:      {type:"Constant",speeds:{"1.7m/s":"Constant"},los:true},
