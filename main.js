@@ -31,7 +31,16 @@ const GHOST_TELL={
   More Speed Info:
   - 2.25m/s if walking w/in 10m, 1.2m/s if standing still w/in 10m, 1.7m/s if all are >10m away from the ghost
   - Has LOS when >10m, and when within 10m LOS builds up but is not applied`,
-  Deogen:     ``,
+  Deogen:     `Tells:
+  - 33% chance for heavy breathing through spirit box when <1m from the ghost (sound: Placeholder)
+  - Very fast until within 3m of the player
+  - More visible during hunts (shorter blinks)
+  Abilities:
+  - You cannot hide from a Deogen, but can easily run due to it's hunt speed
+  More Speed Info:
+  - 3m/s when >3m from the player, when w/in 3m, drops to 0.4m/s
+  More Evidence Info:
+  - Guaranteed spirit box on difficulties with 1 or more evidence`,
   Demon:      ``,
   Gallu:      ``,
   Goryo:      ``,
