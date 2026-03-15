@@ -372,8 +372,8 @@ function renderCheatSheet(){
     const btn=$(`cs-evi-${ev.id}`);if(!btn)return;
     btn.classList.remove("cs-evi-confirmed","cs-evi-ruled-out","cs-evi-impossible");
     if(localEvidence[ev.id]==="confirmed")btn.classList.add("cs-evi-confirmed");
-    else if(localEvidence[ev.id]==="ruled_out")btn.classList.add("cs-evi-ruled-out");
-    else if(!possibleIds.has(ev.id)&&possibleGhosts.length>0)btn.classList.add("cs-evi-impossible");
+    else if(localEvidence[ev.id]==="ruled_out"&&!rules.noRuleOut)btn.classList.add("cs-evi-ruled-out");
+    else if(!possibleIds.has(ev.id)&&possibleGhosts.length>0&&!rules.noRuleOut)btn.classList.add("cs-evi-impossible");
   });
 
   let visible=0;
@@ -609,23 +609,27 @@ function renderDifficultySection(diff){
     if(display){
       const rules=getDifficultyRules(diff);
       const parts=[];
-      if(rules.evidenceCount!==null)parts.push(`${rules.evidenceCount} evidence`);
+      if(diff.preset==="custom"&&rules.evidenceCount!==null)parts.push(`${rules.evidenceCount} evidence`);
       if(rules.noRuleOut)parts.push("no rule-out");
       if(rules.orbConfirmsMinic)parts.push("orb \u2192 Mimic");
-      display.textContent=parts.length?parts.join(" \u00b7 "):"";
+      display.textContent=parts.join(" \u00b7 ");
     }
   } else {
     section.classList.remove("hidden");
-    if(sel)sel.disabled=true;
+    if(sel){sel.disabled=true;sel.style.display="none";}
     if(customOpts)customOpts.classList.add("hidden");
     const rules=getDifficultyRules(diff);
     const def=DIFFICULTY_DEFS[diff.preset]||{label:"Professional"};
     const parts=[def.label];
+    if(diff.preset==="custom"){
+      parts.length=0;
+      parts.push(`Custom \u2014 ${diff.customEvidence??3} evidence, ${diff.customHunt||"medium"} sanity`);
+    }
     if(rules.noRuleOut)parts.push("no rule-out");
     if(rules.orbConfirmsMinic)parts.push("orb \u2192 Mimic");
-    if(display)display.textContent=parts.join(" \u00b7 ");
-    if(sel)sel.disabled=false;
+    if(display){display.textContent=parts.join(" \u00b7 ");display.style.color="#ccc";}
   }
+  if(isAdmin&&sel){sel.disabled=false;sel.style.display="";}
 }
 
 async function saveDifficulty(){
